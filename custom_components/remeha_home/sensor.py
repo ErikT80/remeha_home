@@ -20,6 +20,7 @@ from .const import (
     APPLIANCE_SENSOR_TYPES,
     CLIMATE_ZONE_SENSOR_TYPES,
     DOMAIN,
+    HEATING_CURVE_SENSOR_TYPES,
     HOT_WATER_ZONE_SENSOR_TYPES,
     GAS_PRODUCER_SENSOR_TYPES,
     ELECTRIC_PRODUCER_SENSOR_TYPES
@@ -68,6 +69,15 @@ async def async_setup_entry(
                 entities.append(
                     RemehaHomeSensor(coordinator, climate_zone_id, entity_description)
                 )
+
+            heating_curve = coordinator.get_heating_curve(climate_zone_id) or {}
+            for entity_description in HEATING_CURVE_SENSOR_TYPES:
+                if entity_description.key.split(".")[-1] in heating_curve:
+                    entities.append(
+                        RemehaHomeSensor(
+                            coordinator, climate_zone_id, entity_description
+                        )
+                    )
 
         for hot_water_zone in appliance["hotWaterZones"]:
             hot_water_zone_id = hot_water_zone["hotWaterZoneId"]

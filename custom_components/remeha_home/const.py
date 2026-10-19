@@ -205,6 +205,16 @@ CLIMATE_ZONE_SENSOR_TYPES = [
     ),
 ]
 
+HEATING_CURVE_SENSOR_TYPES = [
+    SensorEntityDescription(
+        key="heatingCurve.maxFlowTemperature",
+        translation_key="heating_curve_max_flow_temperature",
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        device_class=SensorDeviceClass.TEMPERATURE,
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+]
+
 HOT_WATER_ZONE_SENSOR_TYPES = [
     SensorEntityDescription(
         key="dhwTemperature",

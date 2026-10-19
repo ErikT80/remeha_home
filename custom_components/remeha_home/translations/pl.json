@@ -49,6 +49,19 @@
                     }
                 }
             }
+        },
+        "number": {
+            "heating_curve_slope": {
+                "name": "Nachylenie krzywej grzewczej"
+            },
+            "heating_curve_base_setpoint": {
+                "name": "Punkt bazowy krzywej grzewczej"
+            }
+        },
+        "sensor": {
+            "heating_curve_max_flow_temperature": {
+                "name": "Maksymalna temperatura zasilania krzywej grzewczej"
+            }
         }
     },
     "exceptions": {

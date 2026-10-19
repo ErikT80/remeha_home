@@ -485,18 +485,18 @@ Turns fireplace mode on or off.
 GET /climate-zones/{climate_zone_id}/heating-curve
 ```
 
-Returns the heating curve and its limits.
+Returns the weather-compensated heating curve of the climate zone, its limits, and the maximum flow temperature.
 ```json
 {
-  "slope": 0.0,
+  "slope": 1.1,
   "minimumSlope": 0.0,
   "maximumSlope": 4.0,
   "incrementSlope": 0.1,
-  "baseSetpoint": 15.0,
+  "baseSetpoint": 25.0,
   "minimumBaseSetpoint": 15.0,
-  "maximumBaseSetpoint": 35.0,
+  "maximumBaseSetpoint": 70.0,
   "incrementBaseSetpoint": 0.5,
-  "maxFlowTemperature": 35.0
+  "maxFlowTemperature": 70.0
 }
 ```
 

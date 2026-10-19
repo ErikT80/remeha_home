@@ -45,6 +45,19 @@
                     }
                 }
             }
+        },
+        "number": {
+            "heating_curve_slope": {
+                "name": "Pente de la courbe de chauffe"
+            },
+            "heating_curve_base_setpoint": {
+                "name": "Pied de la courbe de chauffe"
+            }
+        },
+        "sensor": {
+            "heating_curve_max_flow_temperature": {
+                "name": "Température de départ maximale de la courbe de chauffe"
+            }
         }
     },
     "exceptions": {
