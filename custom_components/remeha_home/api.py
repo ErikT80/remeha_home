@@ -17,12 +17,25 @@ from homeassistant.helpers.config_entry_oauth2_flow import (
     AbstractOAuth2Implementation,
     OAuth2Session,
 )
-from homeassistant.exceptions import ConfigEntryAuthFailed
+from homeassistant.exceptions import ConfigEntryAuthFailed, HomeAssistantError
 from aiohttp.client_exceptions import ClientResponseError
 
 from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
+
+# Holiday mode: POST /appliances/{id}/holidayschedule (ApplianceHolidayScheduleRequestDto
+# in the Remeha Home app), verified against the live API on 2026-10-22. The API keeps
+# whole days only (it stores <date>T00:00:01Z) and updates the dashboard a few
+# seconds after the request.
+HOLIDAY_START_KEY = "holidayModeStartTime"
+HOLIDAY_END_KEY = "holidayModeEndTime"
+# Cancelling has no endpoint of its own: the app posts the "null" timestamps. The
+# API requires start < end, so the start is one second before the empty value.
+HOLIDAY_CANCEL_BODY = {
+    HOLIDAY_START_KEY: "0001-01-01T00:00:00Z",
+    HOLIDAY_END_KEY: "0001-01-01T00:00:01Z",
+}
 
 
 class RemehaHomeAPI:
@@ -168,6 +181,32 @@ class RemehaHomeAPI:
             json=activities,
         )
         response.raise_for_status()
+
+    async def _async_post_holiday_schedule(self, appliance_id: str, body: dict):
+        response = await self._async_api_request(
+            "POST", f"/appliances/{appliance_id}/holidayschedule", json=body
+        )
+        if response.status >= 400:
+            error = (await response.text())[:500]
+            raise HomeAssistantError(
+                f"Remeha Home rejected the holiday mode request ({response.status}): {error}"
+            )
+
+    async def async_set_holiday_schedule(
+        self, appliance_id: str, start_date: datetime.date, end_date: datetime.date
+    ) -> None:
+        """Schedule holiday mode for an appliance from start_date to end_date."""
+        await self._async_post_holiday_schedule(
+            appliance_id,
+            {
+                HOLIDAY_START_KEY: f"{start_date.isoformat()}T00:00:00Z",
+                HOLIDAY_END_KEY: f"{end_date.isoformat()}T00:00:00Z",
+            },
+        )
+
+    async def async_cancel_holiday_schedule(self, appliance_id: str) -> None:
+        """Cancel an active or scheduled holiday mode."""
+        await self._async_post_holiday_schedule(appliance_id, HOLIDAY_CANCEL_BODY)
 
     async def async_get_appliance_technical_information(
         self, appliance_id: str

@@ -1,0 +1,22 @@
+set_holiday_mode:
+  target:
+    entity:
+      integration: remeha_home
+      domain: binary_sensor
+  fields:
+    start_date:
+      required: true
+      example: "2026-12-20"
+      selector:
+        date:
+    end_date:
+      required: true
+      example: "2026-12-27"
+      selector:
+        date:
+
+cancel_holiday_mode:
+  target:
+    entity:
+      integration: remeha_home
+      domain: binary_sensor

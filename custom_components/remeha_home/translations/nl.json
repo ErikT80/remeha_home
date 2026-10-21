@@ -57,5 +57,25 @@
         "eco_setpoint_requires_tank": {
             "message": "De Eco-temperatuur kan alleen worden aangepast bij een warmwatertank. Een combiketel houdt in Eco geen water warm, dus er is geen temperatuur om in te stellen."
         }
+    },
+    "services": {
+        "set_holiday_mode": {
+            "name": "Vakantiemodus instellen",
+            "description": "Plan de vakantiemodus voor het toestel. Remeha Home bewaart alleen hele dagen; in deze periode gebruikt het toestel de vakantie-instellingen voor verwarming en warm water.",
+            "fields": {
+                "start_date": {
+                    "name": "Begindatum",
+                    "description": "Eerste dag van de vakantiemodus (vertrek)."
+                },
+                "end_date": {
+                    "name": "Einddatum",
+                    "description": "Dag waarop de vakantiemodus eindigt (aankomst)."
+                }
+            }
+        },
+        "cancel_holiday_mode": {
+            "name": "Vakantiemodus stoppen",
+            "description": "Stop een actieve vakantiemodus of verwijder een geplande."
+        }
     }
 }

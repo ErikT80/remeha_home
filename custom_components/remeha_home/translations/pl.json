@@ -61,5 +61,25 @@
         "eco_setpoint_requires_tank": {
             "message": "Temperaturę Eko można zmienić tylko dla zasobnika ciepłej wody. Kocioł dwufunkcyjny nie utrzymuje ciepłej wody w trybie Eko, więc nie ma temperatury do ustawienia."
         }
+    },
+    "services": {
+        "set_holiday_mode": {
+            "name": "Ustaw tryb urlopowy",
+            "description": "Zaplanuj tryb urlopowy urządzenia. Remeha Home przechowuje tylko całe dni; w tym okresie urządzenie obniża ogrzewanie i ciepłą wodę do nastaw urlopowych.",
+            "fields": {
+                "start_date": {
+                    "name": "Data początkowa",
+                    "description": "Pierwszy dzień trybu urlopowego (wyjazd)."
+                },
+                "end_date": {
+                    "name": "Data końcowa",
+                    "description": "Dzień zakończenia trybu urlopowego (przyjazd)."
+                }
+            }
+        },
+        "cancel_holiday_mode": {
+            "name": "Anuluj tryb urlopowy",
+            "description": "Zatrzymaj trwający tryb urlopowy albo usuń zaplanowany."
+        }
     }
 }

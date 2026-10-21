@@ -296,6 +296,24 @@ Request:
 }
 ```
 
+## POST `/appliances/{appliance_id}/holidayschedule`
+Schedule holiday mode for an appliance. The dashboard reports the result in `holidaySchedule` a few seconds later. Remeha keeps whole days only: a start of `2026-11-20T08:00:00Z` is stored as `2026-11-20T00:00:01Z`. The start must be before the end.
+```json
+{
+    "holidayModeStartTime": "2026-11-20T00:00:00Z",
+    "holidayModeEndTime": "2026-11-22T00:00:00Z"
+}
+```
+
+To cancel an active or scheduled holiday, post the empty period (the dashboard then reports `0001-01-01T00:00:01Z` for both times):
+```json
+{
+    "holidayModeStartTime": "0001-01-01T00:00:00Z",
+    "holidayModeEndTime": "0001-01-01T00:00:01Z"
+}
+```
+There is no `PUT` or `DELETE` on this path (404).
+
 ## GET `/appliances/{appliance_id}/energyconsumption/daily`
 Get the daily energy consumption of the appliance.
 This request requires two query parameters, `startDate` and `endDate`, which should contain an ISO-8601 timestamp, e.g. `2023-01-03 00:00:00.000Z`.

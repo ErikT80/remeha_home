@@ -61,5 +61,25 @@
         "eco_setpoint_requires_tank": {
             "message": "The Eco temperature can only be changed for a hot water tank. A combi boiler doesn't keep water warm in Eco, so there is no temperature to set."
         }
+    },
+    "services": {
+        "set_holiday_mode": {
+            "name": "Set holiday mode",
+            "description": "Schedule holiday mode for the appliance. Remeha Home keeps whole days only; the appliance lowers heating and hot water to its holiday setpoints in this period.",
+            "fields": {
+                "start_date": {
+                    "name": "Start date",
+                    "description": "First day of holiday mode (departure)."
+                },
+                "end_date": {
+                    "name": "End date",
+                    "description": "Day holiday mode ends (arrival)."
+                }
+            }
+        },
+        "cancel_holiday_mode": {
+            "name": "Cancel holiday mode",
+            "description": "Stop an active holiday mode or remove a scheduled one."
+        }
     }
 }

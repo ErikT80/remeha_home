@@ -28,6 +28,7 @@ You can simply log in using the credentials that you would use in the respective
     - A Boost switch to start and stop boost (if supported by the appliance). Remeha only accepts boost while the zone is in Schedule mode, so the switch gives an error in other modes. Stopping boost returns the zone to Schedule. While boosting, the water heater shows the Boost mode and its `remaining_boost_time` attribute shows how long it still runs.
 - Each appliance (CV-ketel) exposes the following sensors:
     - The water pressure
+    - Holiday mode (binary sensor), with the scheduled `start_date` and `end_date` as attributes. The `remeha_home.set_holiday_mode` and `remeha_home.cancel_holiday_mode` actions schedule and cancel it, like the holiday mode in the Remeha Home app. Remeha keeps whole days only, and the appliance lowers heating and hot water to its holiday setpoints in this period.
     - The energy consumed and delivered today for heating, hot water and cooling, for the appliance as a whole (disabled by default)
 - Each producer (heat source) of an appliance, such as the heat pump and the gas boiler of a hybrid system, is a separate device with:
     - The energy consumed and delivered today for heating, hot water and cooling (gas boilers report the gas consumed, in m³)
