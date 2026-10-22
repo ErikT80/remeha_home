@@ -1,6 +1,10 @@
 # Remeha Home integration for Home Assistant
 This integration lets you control your Remeha Home thermostats from Home Assistant.
 
+This is a fork of [msvisser/remeha_home](https://github.com/msvisser/remeha_home), which is no longer actively maintained.
+It adds hot water control, heat pump and cooling support, energy data per heat source, holiday mode and more, collected from community pull requests and tested on a live system.
+Please report problems in the [issues of this repository](https://github.com/hugo-leij/remeha_home/issues).
+
 **Before using this integration, make sure you have set up your thermostat in the [Remeha Home](https://play.google.com/store/apps/details?id=com.bdrthermea.application.remeha) app.**
 If you are unable to use the Remeha Home app for your thermostat, this integration will not work.
 
@@ -57,19 +61,26 @@ You can simply log in using the credentials that you would use in the respective
 ## Installation
 
 ### Install with HACS (recommended)
-[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=msvisser&repository=remeha_home&category=integration)
+This fork is not in the default list of [HACS](https://hacs.xyz/), so you add it as a custom repository.
+Click the button, or follow the steps below.
 
-Do you have [HACS](https://hacs.xyz/) installed?
-Click the button or follow the instructions.
-1. Search integrations for **Remeha Home**
-1. Click `Install`
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=hugo-leij&repository=remeha_home&category=integration)
+
+1. In HACS, open the menu (⋮) and choose **Custom repositories**
+1. Add `https://github.com/hugo-leij/remeha_home` with type **Integration**
+1. Search for **Remeha Home**, open it and click **Download**
 1. Restart Home Assistant
 1. See [Setup](#setup)
 
-### Install manually
+Do you already have the original version (msvisser/remeha_home) installed through HACS?
+Remove it in HACS first, then download this version: HACS can't track two repositories for the same integration.
 
-1. Install this platform by creating a `custom_components` folder in the same folder as your configuration.yaml, if it doesn't already exist.
-2. Create another folder `remeha_home` in the `custom_components` folder. Copy all files from `custom_components/remeha_home` into the `remeha_home` folder.
+### Install manually
+1. Download `remeha_home.zip` from the [latest release](https://github.com/hugo-leij/remeha_home/releases/latest)
+1. Create a `custom_components/remeha_home` folder in the folder that contains your `configuration.yaml`, if it doesn't exist yet
+1. Extract the zip file into that `remeha_home` folder
+1. Restart Home Assistant
+1. See [Setup](#setup)
 
 ## Setup
 1. In Home Assistant click on `Settings`
