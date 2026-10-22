@@ -41,7 +41,7 @@ You can simply log in using the credentials that you would use in the respective
     - The water pressure
     - The thermal mode (e.g. heating, cooling or idle)
     - The outdoor temperature measured by the appliance, and the outdoor temperature from the Remeha cloud (disabled by default)
-    - Holiday mode (binary sensor), with the scheduled `start_date` and `end_date` as attributes. The `remeha_home.set_holiday_mode` and `remeha_home.cancel_holiday_mode` actions schedule and cancel it, like the holiday mode in the Remeha Home app. Remeha keeps whole days only, and the appliance lowers heating and hot water to its holiday setpoints in this period. The end date is the day you come back: from midnight on that day, the appliance heats normally again.
+    - Holiday mode (binary sensor), with the scheduled `start_date` and `end_date` as attributes, and actions to schedule and cancel a holiday. See [Holiday mode](#holiday-mode).
     - The energy consumed and delivered today for heating, hot water and cooling, for the appliance as a whole (disabled by default)
 - Each producer (heat source) of an appliance, such as the heat pump and the gas boiler of a hybrid system, is a separate device with:
     - For heat pumps (and other electric producers): the energy consumed and delivered today for heating, hot water and cooling, and the seasonal efficiency
@@ -75,6 +75,60 @@ Click the button or follow the instructions.
 1. Enter your email address and password
 1. Click "Next"
 1. Enjoy
+
+## Holiday mode
+Like in the Remeha Home app, you can schedule a holiday period in which the appliance lowers heating and hot water to its holiday setpoints.
+
+- The Holiday Mode binary sensor of the appliance is on while a holiday is active. Its `start_date` and `end_date` attributes show the scheduled period, also before it starts.
+- The `remeha_home.set_holiday_mode` action schedules a holiday from `start_date` to `end_date`. Remeha keeps whole days only. The end date is the day you come back: from midnight on that day, the appliance heats normally again.
+- The `remeha_home.cancel_holiday_mode` action stops an active holiday or removes a scheduled one.
+
+Both actions target the Holiday Mode sensor. You can run them from **Developer tools → Actions**, or use them in automations and scripts.
+After an action, the dates update right away. The sensor itself only turns on or off a few seconds later, once Remeha has passed the change on to the appliance.
+
+### Example scripts
+With these two scripts you can set and cancel a holiday from a dashboard.
+Create each one in **Settings → Automations & scenes → Scripts → Create script**, choose **Edit in YAML** in the menu (⋮), and paste the YAML.
+Replace `binary_sensor.my_home_holiday_mode` with the entity ID of your Holiday Mode sensor.
+If you keep your scripts in `scripts.yaml`, put each script under its own key, such as `set_holiday_mode:`.
+
+Set holiday mode, which asks for the dates:
+```yaml
+alias: Set holiday mode
+icon: mdi:beach
+fields:
+  start_date:
+    name: Departure
+    required: true
+    selector:
+      date:
+  end_date:
+    name: Return
+    required: true
+    selector:
+      date:
+sequence:
+  - action: remeha_home.set_holiday_mode
+    target:
+      entity_id: binary_sensor.my_home_holiday_mode
+    data:
+      start_date: "{{ start_date }}"
+      end_date: "{{ end_date }}"
+```
+
+Cancel holiday mode:
+```yaml
+alias: Cancel holiday mode
+icon: mdi:home-import-outline
+sequence:
+  - action: remeha_home.cancel_holiday_mode
+    target:
+      entity_id: binary_sensor.my_home_holiday_mode
+```
+
+Add both scripts to a dashboard, for example with an Entities card.
+Click the name of Set holiday mode (not its Run button) to open a dialog where you pick the dates and run the script.
+Cancel holiday mode only needs its Run button.
 
 ## API documentation
 For information on the Remeha Home API see [API documentation](documentation/api.md).
