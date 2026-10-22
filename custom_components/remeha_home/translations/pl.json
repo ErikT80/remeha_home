@@ -60,6 +60,18 @@
         },
         "eco_setpoint_requires_tank": {
             "message": "Temperaturę Eko można zmienić tylko dla zasobnika ciepłej wody. Kocioł dwufunkcyjny nie utrzymuje ciepłej wody w trybie Eko, więc nie ma temperatury do ustawienia."
+        },
+        "holiday_end_before_start": {
+            "message": "Data końcowa musi być późniejsza niż data początkowa."
+        },
+        "holiday_end_in_past": {
+            "message": "Data końcowa musi być późniejsza niż dzisiaj."
+        },
+        "holiday_mode_wrong_entity": {
+            "message": "{entity_id} nie jest czujnikiem trybu urlopowego. Wybierz czujnik Holiday Mode urządzenia."
+        },
+        "holiday_request_rejected": {
+            "message": "Remeha Home odrzuciło żądanie trybu urlopowego ({status}): {message}"
         }
     },
     "services": {

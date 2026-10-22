@@ -56,6 +56,18 @@
         },
         "eco_setpoint_requires_tank": {
             "message": "De Eco-temperatuur kan alleen worden aangepast bij een warmwatertank. Een combiketel houdt in Eco geen water warm, dus er is geen temperatuur om in te stellen."
+        },
+        "holiday_end_before_start": {
+            "message": "De einddatum moet na de begindatum liggen."
+        },
+        "holiday_end_in_past": {
+            "message": "De einddatum moet na vandaag liggen."
+        },
+        "holiday_mode_wrong_entity": {
+            "message": "{entity_id} is geen vakantiemodus-sensor. Kies de sensor Holiday Mode van het toestel."
+        },
+        "holiday_request_rejected": {
+            "message": "Remeha Home heeft het vakantiemodus-verzoek geweigerd ({status}): {message}"
         }
     },
     "services": {

@@ -38,6 +38,30 @@ HOLIDAY_CANCEL_BODY = {
 }
 
 
+def _error_message(text: str) -> str:
+    """Return the messages of a Remeha error response, or the start of the raw text.
+
+    Remeha answers with problem details, e.g. {"title": "Bad Request",
+    "errors": {"": ["Start Date must be before the End Date."]}}.
+    """
+    try:
+        body = json.loads(text)
+    except ValueError:
+        return text[:500]
+    if not isinstance(body, dict):
+        return text[:500]
+
+    errors = body.get("errors")
+    messages = []
+    if isinstance(errors, dict):
+        for field_messages in errors.values():
+            if isinstance(field_messages, list):
+                messages.extend(str(message) for message in field_messages)
+    return str(
+        " ".join(messages) or body.get("detail") or body.get("title") or text[:500]
+    )
+
+
 class RemehaHomeAPI:
     """Provide Remeha Home authentication tied to an OAuth2 based config entry."""
 
@@ -183,13 +207,18 @@ class RemehaHomeAPI:
         response.raise_for_status()
 
     async def _async_post_holiday_schedule(self, appliance_id: str, body: dict):
+        """Post a holiday schedule, raising Remeha's own message when it is rejected."""
         response = await self._async_api_request(
             "POST", f"/appliances/{appliance_id}/holidayschedule", json=body
         )
         if response.status >= 400:
-            error = (await response.text())[:500]
             raise HomeAssistantError(
-                f"Remeha Home rejected the holiday mode request ({response.status}): {error}"
+                translation_domain=DOMAIN,
+                translation_key="holiday_request_rejected",
+                translation_placeholders={
+                    "status": str(response.status),
+                    "message": _error_message(await response.text()),
+                },
             )
 
     async def async_set_holiday_schedule(

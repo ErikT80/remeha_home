@@ -56,6 +56,18 @@
         },
         "eco_setpoint_requires_tank": {
             "message": "La température Éco ne peut être modifiée que pour un ballon d'eau chaude. Une chaudière mixte ne maintient pas l'eau chaude en mode Éco, il n'y a donc pas de température à régler."
+        },
+        "holiday_end_before_start": {
+            "message": "La date de fin doit être postérieure à la date de début."
+        },
+        "holiday_end_in_past": {
+            "message": "La date de fin doit être postérieure à aujourd'hui."
+        },
+        "holiday_mode_wrong_entity": {
+            "message": "{entity_id} n'est pas un capteur de mode vacances. Choisissez le capteur Holiday Mode de l'appareil."
+        },
+        "holiday_request_rejected": {
+            "message": "Remeha Home a refusé la demande de mode vacances ({status}) : {message}"
         }
     },
     "services": {

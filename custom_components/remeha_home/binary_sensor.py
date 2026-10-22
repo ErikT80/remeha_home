@@ -13,11 +13,11 @@ from homeassistant.components.binary_sensor import (
     BinarySensorEntityDescription,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import config_validation as cv, entity_platform
 from homeassistant.helpers.event import async_call_later
-from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.helpers.entity import DeviceInfo, Entity
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
@@ -68,10 +68,10 @@ async def async_setup_entry(
             vol.Required(ATTR_START_DATE): cv.date,
             vol.Required(ATTR_END_DATE): cv.date,
         },
-        "async_set_holiday_mode",
+        _async_handle_holiday_service,
     )
     platform.async_register_entity_service(
-        SERVICE_CANCEL_HOLIDAY_MODE, {}, "async_cancel_holiday_mode"
+        SERVICE_CANCEL_HOLIDAY_MODE, {}, _async_handle_holiday_service
     )
 
     entities = []
@@ -200,9 +200,15 @@ class RemehaHomeHolidayModeBinarySensor(CoordinatorEntity, BinarySensorEntity):
     async def async_set_holiday_mode(self, start_date: date, end_date: date) -> None:
         """Schedule holiday mode from start_date to end_date (whole days)."""
         if end_date <= start_date:
-            raise ServiceValidationError("end_date must be after start_date")
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="holiday_end_before_start",
+            )
         if end_date <= dt_util.now().date():
-            raise ServiceValidationError("end_date must be in the future")
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="holiday_end_in_past",
+            )
 
         await self.api.async_set_holiday_schedule(self.appliance_id, start_date, end_date)
         await self._async_refresh_soon()
@@ -219,4 +225,25 @@ class RemehaHomeHolidayModeBinarySensor(CoordinatorEntity, BinarySensorEntity):
         async def _refresh(_now: datetime) -> None:
             await self.coordinator.async_request_refresh()
 
-        async_call_later(self.hass, REFRESH_DELAY, _refresh)
+        self.async_on_remove(async_call_later(self.hass, REFRESH_DELAY, _refresh))
+
+
+async def _async_handle_holiday_service(entity: Entity, call: ServiceCall) -> None:
+    """Run a holiday mode action on the Holiday Mode sensor.
+
+    The actions can target every binary sensor of the integration, so give a clear
+    error for the other ones.
+    """
+    if not isinstance(entity, RemehaHomeHolidayModeBinarySensor):
+        raise ServiceValidationError(
+            translation_domain=DOMAIN,
+            translation_key="holiday_mode_wrong_entity",
+            translation_placeholders={"entity_id": entity.entity_id},
+        )
+
+    if call.service == SERVICE_SET_HOLIDAY_MODE:
+        await entity.async_set_holiday_mode(
+            call.data[ATTR_START_DATE], call.data[ATTR_END_DATE]
+        )
+    else:
+        await entity.async_cancel_holiday_mode()
