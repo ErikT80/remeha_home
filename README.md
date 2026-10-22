@@ -22,6 +22,7 @@ You can simply log in using the credentials that you would use in the respective
 - Each climate zone also exposes the following sensors/switches/numbers:
     - The room temperature
     - The status (e.g. heating or idle), plus a binary status sensor (disabled by default)
+    - Pre-heat (binary sensor, if reported by the appliance): on while the zone starts heating early to reach the next setpoint of the clock program on time
     - The next schedule setpoint
     - The time at which the next schedule setpoint gets activated
     - The current schedule setpoint
@@ -38,7 +39,8 @@ You can simply log in using the credentials that you would use in the respective
     - Setpoint numbers for the Comfort and Eco temperatures. The Eco temperature is only available for a hot water tank: a combi boiler doesn't keep water warm in Eco, so Remeha has no Eco temperature for it.
     - A Boost switch to start and stop boost (if supported by the appliance). Remeha only accepts boost while the zone is in Schedule mode, so the switch gives an error in other modes. Stopping boost returns the zone to Schedule. While boosting, the water heater shows the Boost mode and its `remaining_boost_time` attribute shows how long it still runs.
 - Each appliance (boiler or heat pump) exposes the following sensors:
-    - The water pressure
+    - The water pressure, and a Water Pressure problem sensor that turns on when Remeha reports that the pressure is not OK
+    - Whether the appliance is online (diagnostic)
     - The thermal mode (e.g. heating, cooling or idle)
     - The outdoor temperature measured by the appliance, and the outdoor temperature from the Remeha cloud (disabled by default)
     - Holiday mode (binary sensor), with the scheduled `start_date` and `end_date` as attributes, and actions to schedule and cancel a holiday. See [Holiday mode](#holiday-mode).

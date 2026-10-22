@@ -9,7 +9,13 @@ from homeassistant.components.binary_sensor import (
     BinarySensorEntityDescription,
     BinarySensorDeviceClass,
 )
-from homeassistant.const import UnitOfEnergy, UnitOfTemperature, UnitOfPressure, UnitOfVolume
+from homeassistant.const import (
+    EntityCategory,
+    UnitOfEnergy,
+    UnitOfTemperature,
+    UnitOfPressure,
+    UnitOfVolume,
+)
 
 DOMAIN = "remeha_home"
 
@@ -213,6 +219,27 @@ HOT_WATER_ZONE_SENSOR_TYPES = [
     ),
 ]
 
+APPLIANCE_BINARY_SENSOR_TYPES = [
+    (
+        BinarySensorEntityDescription(
+            key="applianceOnline",
+            name="Online",
+            device_class=BinarySensorDeviceClass.CONNECTIVITY,
+            entity_category=EntityCategory.DIAGNOSTIC,
+        ),
+        lambda value: bool(value),
+    ),
+    (
+        BinarySensorEntityDescription(
+            key="waterPressureOK",
+            name="Water Pressure",
+            device_class=BinarySensorDeviceClass.PROBLEM,
+        ),
+        # Remeha reports whether the pressure is OK, a problem sensor is on when it isn't
+        lambda value: not value,
+    ),
+]
+
 CLIMATE_ZONE_BINARY_SENSOR_TYPES = [
     (
         BinarySensorEntityDescription(
@@ -223,7 +250,15 @@ CLIMATE_ZONE_BINARY_SENSOR_TYPES = [
         ),
         lambda value: value
         in ["ProducingHeat", "RequestingHeat", "ProducingCold", "RequestingCold"],
-    )
+    ),
+    (
+        BinarySensorEntityDescription(
+            key="preHeat.active",
+            name="Pre-heat",
+            icon="mdi:clock-start",
+        ),
+        lambda value: bool(value),
+    ),
 ]
 
 HOT_WATER_ZONE_BINARY_SENSOR_TYPES = [
