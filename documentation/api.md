@@ -61,7 +61,11 @@ The messages are in `errors`:
 
 ## Dashboard
 
-### `GET /homes/dashboard`
+### Get the dashboard
+```http
+GET /homes/dashboard
+```
+
 Returns the state of all appliances with their climate zones and hot water zones, as shown when the app opens.
 The integration polls it every minute, with a `?t=<unix time>` query parameter to prevent caching.
 
@@ -77,7 +81,7 @@ The available fields differ per appliance. The most important ones:
 | `activeThermalMode` | e.g. `Idle` or `Cooling` |
 | `waterPressure`, `waterPressureOK` | Pressure in bar, and whether Remeha considers it OK |
 | `outdoorTemperatureInformation` | `applianceOutdoorTemperature` from the appliance's sensor, `cloudOutdoorTemperature` from a weather service |
-| `holidaySchedule` | `startTime`, `endTime` (local times, year 1 when not set) and `active`, see [holiday mode](#post-appliancesappliance_idholidayschedule) |
+| `holidaySchedule` | `startTime`, `endTime` (local times, year 1 when not set) and `active`, see [holiday mode](#holiday-mode) |
 | `gasCalorificValue` | kWh per m³ of gas, to convert the gas energy of the [energy consumption](#energy-consumption) to m³ |
 | **Climate zone** | |
 | `zoneMode` | `Scheduling`, `TemporaryOverride`, `Manual` or `FrostProtection` |
@@ -340,7 +344,11 @@ The available fields differ per appliance. The most important ones:
 
 ## Appliances
 
-### `GET /appliances/{appliance_id}/technicaldetails`
+### Technical details
+```http
+GET /appliances/{appliance_id}/technicaldetails
+```
+
 Returns the name of the appliance and its gateways.
 
 <details>
@@ -364,7 +372,11 @@ Returns the name of the appliance and its gateways.
 ```
 </details>
 
-### `POST /appliances/{appliance_id}/holidayschedule`
+### Holiday mode
+```http
+POST /appliances/{appliance_id}/holidayschedule
+```
+
 Schedules holiday mode, in which the appliance lowers heating and hot water to its holiday setpoints.
 The dashboard reports the result in `holidaySchedule` a few seconds later.
 
@@ -403,17 +415,25 @@ There is no `PUT` or `DELETE` on this path (404).
 | `GET /climate-zones/{climate_zone_id}/activities` | | Read the activities of the clock programs |
 | `PUT /climate-zones/{climate_zone_id}/activities/heating` | list of activities | Change the temperatures of the heating activities |
 
-### `POST /climate-zones/{climate_zone_id}/modes/schedule`
+### Schedule mode
+```http
+POST /climate-zones/{climate_zone_id}/modes/schedule
+```
+
 Switches the zone to the clock program.
 `heatingProgramId` must be the active clock program (`activeHeatingClimateTimeProgramNumber`); it can't select another one.
-To select another clock program, use the `activate` request below.
+To select another clock program, see [Select a clock program](#select-a-clock-program).
 ```json
 {
   "heatingProgramId": 1
 }
 ```
 
-### `POST /climate-zones/{climate_zone_id}/modes/temporary-override`
+### Temporary override
+```http
+POST /climate-zones/{climate_zone_id}/modes/temporary-override
+```
+
 Overrides the clock program with another temperature until its next switch.
 The end of the override is in `temporaryOverride.endTime`, in UTC (see [Times](#times)).
 ```json
@@ -422,7 +442,11 @@ The end of the override is in `temporaryOverride.endTime`, in UTC (see [Times](#
 }
 ```
 
-### `POST /climate-zones/{climate_zone_id}/modes/manual`
+### Manual mode
+```http
+POST /climate-zones/{climate_zone_id}/modes/manual
+```
+
 Switches the zone to manual mode, which holds the given temperature.
 ```json
 {
@@ -430,13 +454,25 @@ Switches the zone to manual mode, which holds the given temperature.
 }
 ```
 
-### `POST /climate-zones/{climate_zone_id}/modes/anti-frost`
+### Frost protection
+```http
+POST /climate-zones/{climate_zone_id}/modes/anti-frost
+```
+
 Switches the zone to frost protection, which is off in the app. No body.
 
-### `POST /climate-zones/{climate_zone_id}/time-programs/heating/{time_program_id}/activate`
+### Select a clock program
+```http
+POST /climate-zones/{climate_zone_id}/time-programs/heating/{time_program_id}/activate
+```
+
 Selects clock program `time_program_id` (1 to 3) for schedule mode. No body.
 
-### `POST /climate-zones/{climate_zone_id}/modes/fireplacemode`
+### Fireplace mode
+```http
+POST /climate-zones/{climate_zone_id}/modes/fireplacemode
+```
+
 Turns fireplace mode on or off.
 ```json
 {
@@ -444,7 +480,11 @@ Turns fireplace mode on or off.
 }
 ```
 
-### `GET /climate-zones/{climate_zone_id}/heating-curve`
+### Get the heating curve
+```http
+GET /climate-zones/{climate_zone_id}/heating-curve
+```
+
 Returns the heating curve and its limits.
 ```json
 {
@@ -460,7 +500,11 @@ Returns the heating curve and its limits.
 }
 ```
 
-### `POST /climate-zones/{climate_zone_id}/heating-curve`
+### Change the heating curve
+```http
+POST /climate-zones/{climate_zone_id}/heating-curve
+```
+
 Changes the heating curve. Send both values, also when only one changes.
 ```json
 {
@@ -469,7 +513,11 @@ Changes the heating curve. Send both values, also when only one changes.
 }
 ```
 
-### `GET /climate-zones/{climate_zone_id}/activities`
+### Get the activities
+```http
+GET /climate-zones/{climate_zone_id}/activities
+```
+
 Returns the activities of the clock programs, such as home, sleep and away, with their temperatures and limits.
 A heat pump with cooling returns its `Cooling` activities first, followed by the `Heating` activities **with the same activity numbers**.
 Always match on `type` as well as `activityNumber`.
@@ -573,7 +621,11 @@ Always match on `type` as well as `activityNumber`.
 ```
 </details>
 
-### `PUT /climate-zones/{climate_zone_id}/activities/heating`
+### Change the activity temperatures
+```http
+PUT /climate-zones/{climate_zone_id}/activities/heating
+```
+
 Changes the temperatures of the heating activities.
 The integration sends all heating activities, with the changed temperature for one of them.
 ```json
@@ -595,13 +647,21 @@ The hot water modes of the Remeha Home app map to these modes and requests:
 
 The mode requests have no body.
 
-### `POST /hot-water-zones/{hot_water_zone_id}/modes/boost`
+### Boost
+```http
+POST /hot-water-zones/{hot_water_zone_id}/modes/boost
+```
+
 Heats the water to the Comfort setpoint for a while, 30 minutes on the measured system.
 - The API only accepts boost while the zone is in `Scheduling` mode.
 - `boostModeEndTime` shows when the boost ends, in UTC (see [Times](#times)).
 - To stop a boost, switch to another mode, e.g. `modes/schedule`.
 
-### `POST /hot-water-zones/{hot_water_zone_id}/comfort-setpoint`
+### Comfort temperature
+```http
+POST /hot-water-zones/{hot_water_zone_id}/comfort-setpoint
+```
+
 Sets the temperature of the Comfort mode.
 ```json
 {
@@ -609,7 +669,11 @@ Sets the temperature of the Comfort mode.
 }
 ```
 
-### `POST /hot-water-zones/{hot_water_zone_id}/reduced-setpoint`
+### Eco temperature
+```http
+POST /hot-water-zones/{hot_water_zone_id}/reduced-setpoint
+```
+
 Sets the temperature of the Eco mode. This only works for a hot water tank (`dhwType` `Tank`).
 For a combi boiler, the API returns 400 "Zone must be of type Tank to do this process.": a combi boiler doesn't keep water warm in Eco.
 ```json
@@ -620,7 +684,11 @@ For a combi boiler, the API returns 400 "Zone must be of type Tank to do this pr
 
 ## Energy consumption
 
-### `GET /appliances/{appliance_id}/energyconsumption/{period}`
+### Get the energy consumption
+```http
+GET /appliances/{appliance_id}/energyconsumption/{period}
+```
+
 Returns the energy consumed and delivered by the appliance, per period: `hourly`, `daily`, `monthly` or `yearly`.
 Two query parameters select the periods: `startDate` and `endDate`, e.g. `?startDate=2026-10-22 00:00:00.000Z&endDate=2026-10-22 23:59:59.000Z`.
 
