@@ -177,7 +177,7 @@ HEATING_CURVE_PARAMS = {
         "min_key": "minimumSlope",
         "max_key": "maximumSlope",
         "step_key": "incrementSlope",
-        "name": "Heating Curve Slope",
+        "translation_key": "heating_curve_slope",
         "icon": "mdi:chart-line",
         "unit": None,
         "device_class": None,
@@ -187,7 +187,7 @@ HEATING_CURVE_PARAMS = {
         "min_key": "minimumBaseSetpoint",
         "max_key": "maximumBaseSetpoint",
         "step_key": "incrementBaseSetpoint",
-        "name": "Heating Curve Base Setpoint",
+        "translation_key": "heating_curve_base_setpoint",
         "icon": None,
         "unit": UnitOfTemperature.CELSIUS,
         "device_class": NumberDeviceClass.TEMPERATURE,
@@ -217,7 +217,7 @@ class RemehaHomeHeatingCurveNumber(CoordinatorEntity, NumberEntity):
 
         key = f"heating_curve_{parameter}"
         self._attr_unique_id = "_".join([DOMAIN, self.climate_zone_id, key])
-        self._attr_name = self._param_config["name"]
+        self._attr_translation_key = self._param_config["translation_key"]
         self._attr_icon = self._param_config["icon"]
         self._attr_native_unit_of_measurement = self._param_config["unit"]
         self._attr_device_class = self._param_config["device_class"]
@@ -275,6 +275,9 @@ class RemehaHomeHeatingCurveNumber(CoordinatorEntity, NumberEntity):
         if data is None:
             return
 
+        # Avoid floating point artifacts such as 1.2000000000000002 from the UI step
+        value = round(value, 2)
+
         # The API requires both slope and baseSetpoint in every POST
         if self.parameter == "slope":
             slope = value
@@ -293,7 +296,7 @@ class RemehaHomeHeatingCurveNumber(CoordinatorEntity, NumberEntity):
             self.climate_zone_id, slope, base_setpoint
         )
 
-        self.coordinator.heating_curve_data.pop(self.climate_zone_id, None)
+        self.coordinator.invalidate_heating_curve(self.climate_zone_id)
         await self.coordinator.async_request_refresh()
 
 

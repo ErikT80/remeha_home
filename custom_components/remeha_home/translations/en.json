@@ -49,6 +49,19 @@
                     }
                 }
             }
+        },
+        "number": {
+            "heating_curve_slope": {
+                "name": "Heating curve slope"
+            },
+            "heating_curve_base_setpoint": {
+                "name": "Heating curve base temperature"
+            }
+        },
+        "sensor": {
+            "heating_curve_max_flow_temperature": {
+                "name": "Heating curve maximum flow temperature"
+            }
         }
     },
     "exceptions": {

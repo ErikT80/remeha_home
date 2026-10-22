@@ -45,6 +45,19 @@
                     }
                 }
             }
+        },
+        "number": {
+            "heating_curve_slope": {
+                "name": "Stooklijn helling"
+            },
+            "heating_curve_base_setpoint": {
+                "name": "Stooklijn voetpunt"
+            }
+        },
+        "sensor": {
+            "heating_curve_max_flow_temperature": {
+                "name": "Stooklijn maximale aanvoertemperatuur"
+            }
         }
     },
     "exceptions": {

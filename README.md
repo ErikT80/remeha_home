@@ -32,7 +32,8 @@ You can simply log in using the credentials that you would use in the respective
     - The current schedule setpoint
     - The end time of a temporary override (unknown when there is none), also as the `override_end_time` attribute of the climate entity
     - Switch to control fireplace mode
-    - The heating curve slope and base setpoint (if supported by the appliance)
+    - The heating curve slope and base setpoint (if supported by the appliance), and its maximum flow temperature (diagnostic).
+    They are updated every 15 minutes, so changes made in the Remeha Home app show up.
     - The temperatures of the heating activities used in the clock programs
 - Each hot water zone exposes:
     - The water temperature. Combi boilers that don't report it get no water temperature sensor.

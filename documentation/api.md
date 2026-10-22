@@ -91,6 +91,7 @@ The available fields differ per appliance. The most important ones:
 | `temporaryOverride.endTime` | End of a temporary override (UTC), year 1 when there is none |
 | `preHeat` | `enabled` and `active`: whether the zone starts heating early to reach the next setpoint on time. This is part of the climate zone, not the appliance |
 | `activeHeatingClimateTimeProgramNumber` | The active clock program, 1 to 3 |
+| `controlStrategy` | How the zone is controlled, e.g. `RoomTemperatureOnly` or `Automatic` |
 | **Hot water zone** | |
 | `dhwType` | `Tank` or `Combi` |
 | `dhwZoneMode` | `Scheduling`, `ContinuousComfort`, `Off` or `Boost`, see [hot water zones](#hot-water-zones) |
@@ -485,18 +486,29 @@ Turns fireplace mode on or off.
 GET /climate-zones/{climate_zone_id}/heating-curve
 ```
 
-Returns the heating curve and its limits.
+Returns the weather-compensated heating curve of the climate zone, its limits, and the maximum flow temperature.
+The heating curve sets the flow temperature (the temperature of the water to the radiators or floor heating) from the outdoor temperature:
+
+| Field | Meaning |
+|---|---|
+| `slope` | How much warmer the flow gets for each degree colder outside |
+| `baseSetpoint` | The flow temperature where the curve starts, when it is mild outside |
+| `maxFlowTemperature` | The highest flow temperature, however cold it is |
+| `minimum…`, `maximum…`, `increment…` | The allowed range and step of `slope` and `baseSetpoint` |
+
+A zone that controls on the room temperature only (`controlStrategy` `RoomTemperatureOnly`) also returns a heating curve. On the measured system, its slope was 0.0.
+
 ```json
 {
-  "slope": 0.0,
+  "slope": 1.1,
   "minimumSlope": 0.0,
   "maximumSlope": 4.0,
   "incrementSlope": 0.1,
-  "baseSetpoint": 15.0,
+  "baseSetpoint": 25.0,
   "minimumBaseSetpoint": 15.0,
-  "maximumBaseSetpoint": 35.0,
+  "maximumBaseSetpoint": 70.0,
   "incrementBaseSetpoint": 0.5,
-  "maxFlowTemperature": 35.0
+  "maxFlowTemperature": 70.0
 }
 ```
 
@@ -506,6 +518,7 @@ POST /climate-zones/{climate_zone_id}/heating-curve
 ```
 
 Changes the heating curve. Send both values, also when only one changes.
+The values are stored as sent, so round them to their increment: a slope of `1.9` is stored as `1.9`.
 ```json
 {
   "slope": 1.2,

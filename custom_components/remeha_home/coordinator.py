@@ -85,6 +85,8 @@ class RemehaHomeUpdateCoordinator(DataUpdateCoordinator):
         self.appliance_producer_ids: dict[str, set[str]] = {}
         self.dhw_activity_cache = {}
         self.heating_curve_data: dict[str, dict] = {}
+        self.heating_curve_last_update: dict[str, datetime] = {}
+        self.heating_curve_unsupported: set[str] = set()
         self.activities_data: dict[str, list] = {}
 
     async def _async_update_data(self):
@@ -223,25 +225,11 @@ class RemehaHomeUpdateCoordinator(DataUpdateCoordinator):
                         "softwareVersion": "Unknown",
                     }
 
+                await self._async_update_heating_curve(climate_zone_id, now)
+                climate_zone["heatingCurve"] = self.heating_curve_data.get(
+                    climate_zone_id, {}
+                )
                 self.items[climate_zone_id] = climate_zone
-
-                # Fetch heating curve data once (re-fetched after writes)
-                if climate_zone_id not in self.heating_curve_data:
-                    try:
-                        self.heating_curve_data[climate_zone_id] = (
-                            await self.api.async_get_heating_curve(climate_zone_id)
-                        )
-                        _LOGGER.debug(
-                            "Requested heating curve data for climate zone %s: %s",
-                            climate_zone_id,
-                            self.heating_curve_data[climate_zone_id],
-                        )
-                    except ClientResponseError as err:
-                        _LOGGER.warning(
-                            "Failed to request heating curve data for climate zone %s: %s",
-                            climate_zone_id,
-                            err,
-                        )
 
                 # Fetch activities data once (re-fetched after writes)
                 if climate_zone_id not in self.activities_data:
@@ -290,6 +278,52 @@ class RemehaHomeUpdateCoordinator(DataUpdateCoordinator):
                 appliance_id, get_producers(appliance["consumptionData"])
             )
         return data
+
+    async def _async_update_heating_curve(
+        self, climate_zone_id: str, now: datetime
+    ) -> None:
+        """Request the heating curve of a climate zone every 15 minutes."""
+        if climate_zone_id in self.heating_curve_unsupported:
+            return
+
+        last_update = self.heating_curve_last_update.get(climate_zone_id)
+        if last_update is not None and now - last_update < timedelta(
+            minutes=14, seconds=45
+        ):
+            return
+
+        self.heating_curve_last_update[climate_zone_id] = now
+        try:
+            self.heating_curve_data[climate_zone_id] = (
+                await self.api.async_get_heating_curve(climate_zone_id)
+            )
+            _LOGGER.debug(
+                "Requested heating curve data for climate zone %s: %s",
+                climate_zone_id,
+                self.heating_curve_data[climate_zone_id],
+            )
+        except ClientResponseError as err:
+            # A client error before any successful request means the zone has no heating curve
+            if (
+                climate_zone_id not in self.heating_curve_data
+                and 400 <= err.status < 500
+            ):
+                self.heating_curve_unsupported.add(climate_zone_id)
+                _LOGGER.info(
+                    "Heating curve is not available for climate zone %s: %s",
+                    climate_zone_id,
+                    err,
+                )
+            else:
+                _LOGGER.warning(
+                    "Failed to request heating curve data for climate zone %s: %s",
+                    climate_zone_id,
+                    err,
+                )
+
+    def invalidate_heating_curve(self, climate_zone_id: str) -> None:
+        """Request the heating curve of a climate zone again on the next update."""
+        self.heating_curve_last_update.pop(climate_zone_id, None)
 
     def _update_producers(self, appliance_id: str, producers: list[dict]) -> None:
         """Register the producers (heat sources) of an appliance as devices."""
