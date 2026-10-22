@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+from datetime import datetime
+
+import homeassistant.util.dt as dt_util
+
 
 def detect_dhw_setpoint_activity(
     target: float | None,
@@ -34,3 +38,17 @@ def supports_reduced_setpoint(hot_water_zone: dict) -> bool:
     water warm in eco mode, so it has no eco temperature to set.
     """
     return hot_water_zone.get("dhwType", "Tank") == "Tank"
+
+
+def remeha_time(value: str | None) -> datetime | None:
+    """Convert a Remeha API time to an aware datetime.
+
+    The API sends local times with a 'Z' suffix, and a time in the year 1
+    (0001-01-01T00:00:00Z) for "not set".
+    """
+    if not value or str(value).startswith("0001-"):
+        return None
+    parsed = dt_util.parse_datetime(str(value))
+    if parsed is None:
+        return None
+    return parsed.replace(tzinfo=dt_util.DEFAULT_TIME_ZONE)

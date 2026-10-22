@@ -29,6 +29,7 @@ from .const import (
     HOT_WATER_ZONE_BINARY_SENSOR_TYPES,
 )
 from .coordinator import RemehaHomeUpdateCoordinator
+from .util import remeha_time
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -39,19 +40,6 @@ ATTR_END_DATE = "end_date"
 
 # The API applies changes a few seconds after the request
 REFRESH_DELAY = 15
-
-# The API reports 0001-01-01T00:00:0xZ when no holiday is set
-_EMPTY_HOLIDAY_YEAR = 1
-
-
-def _parse_holiday_time(value: str | None) -> datetime | None:
-    """Parse a holiday time from the API, mapping the empty value to None."""
-    if not value:
-        return None
-    parsed = dt_util.parse_datetime(value)
-    if parsed is None or parsed.year == _EMPTY_HOLIDAY_YEAR:
-        return None
-    return parsed
 
 
 async def async_setup_entry(
@@ -185,8 +173,9 @@ class RemehaHomeHolidayModeBinarySensor(CoordinatorEntity, BinarySensorEntity):
     @property
     def extra_state_attributes(self) -> dict:
         """Return the scheduled holiday period (None when not set)."""
-        start = _parse_holiday_time(self._schedule.get("startTime"))
-        end = _parse_holiday_time(self._schedule.get("endTime"))
+        # The API reports 0001-01-01T00:00:01Z when no holiday is set
+        start = remeha_time(self._schedule.get("startTime"))
+        end = remeha_time(self._schedule.get("endTime"))
         return {
             ATTR_START_DATE: start.date().isoformat() if start else None,
             ATTR_END_DATE: end.date().isoformat() if end else None,
