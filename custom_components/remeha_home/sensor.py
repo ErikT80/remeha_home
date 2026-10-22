@@ -30,9 +30,12 @@ from .coordinator import (
     get_producer_id,
     get_producers,
 )
-from .util import remeha_time, reports_dhw_temperature
+from .util import remeha_time, remeha_utc_time, reports_dhw_temperature
 
 _LOGGER = logging.getLogger(__name__)
+
+# Times that the API sends in UTC, the other times are local times
+UTC_TIME_KEYS = {"temporaryOverride.endTime"}
 
 # Totals per energy type on the appliance, replaced by the sensors of the producer devices
 REMOVED_APPLIANCE_SENSOR_KEYS = [
@@ -160,7 +163,7 @@ class RemehaHomeSensor(CoordinatorEntity, SensorEntity):
         data = self._data
         for part in self.entity_description.key.split("."):
             # If the key is missing for some reason, don't crash, instead return None
-            if part not in data:
+            if not isinstance(data, dict) or part not in data:
                 _LOGGER.debug(
                     "Key not found in data: %s", self.entity_description.key
                 )
@@ -169,6 +172,8 @@ class RemehaHomeSensor(CoordinatorEntity, SensorEntity):
         value = data
 
         if self.entity_description.device_class == SensorDeviceClass.TIMESTAMP:
+            if self.entity_description.key in UTC_TIME_KEYS:
+                return remeha_utc_time(value)
             return remeha_time(value)
 
         return value

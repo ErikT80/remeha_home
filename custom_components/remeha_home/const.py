@@ -32,6 +32,11 @@ APPLIANCE_SENSOR_TYPES = [
         name="Thermal Mode",
     ),
     SensorEntityDescription(
+        key="errorStatus",
+        name="Error Status",
+        icon="mdi:alert-circle-outline",
+    ),
+    SensorEntityDescription(
         key="outdoorTemperatureInformation.applianceOutdoorTemperature",
         name="Outdoor Temperature",
         native_unit_of_measurement=UnitOfTemperature.CELSIUS,
@@ -192,6 +197,11 @@ CLIMATE_ZONE_SENSOR_TYPES = [
         name="Current Schedule Setpoint",
         native_unit_of_measurement=UnitOfTemperature.CELSIUS,
         device_class=SensorDeviceClass.TEMPERATURE,
+    ),
+    SensorEntityDescription(
+        key="temporaryOverride.endTime",
+        name="Override End",
+        device_class=SensorDeviceClass.TIMESTAMP,
     ),
 ]
 

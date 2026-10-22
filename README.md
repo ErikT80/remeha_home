@@ -26,6 +26,7 @@ You can simply log in using the credentials that you would use in the respective
     - The next schedule setpoint
     - The time at which the next schedule setpoint gets activated
     - The current schedule setpoint
+    - The end time of a temporary override (unknown when there is none), also as the `override_end_time` attribute of the climate entity
     - Switch to control fireplace mode
     - The heating curve slope and base setpoint (if supported by the appliance)
     - The temperatures of the heating activities used in the clock programs
@@ -42,6 +43,7 @@ You can simply log in using the credentials that you would use in the respective
     - The water pressure, and a Water Pressure problem sensor that turns on when Remeha reports that the pressure is not OK
     - Whether the appliance is online (diagnostic)
     - The thermal mode (e.g. heating, cooling or idle)
+    - The error status reported by Remeha (e.g. Running)
     - The outdoor temperature measured by the appliance, and the outdoor temperature from the Remeha cloud (disabled by default)
     - Holiday mode (binary sensor), with the scheduled `start_date` and `end_date` as attributes, and actions to schedule and cancel a holiday. See [Holiday mode](#holiday-mode).
     - The energy consumed and delivered today for heating, hot water and cooling, for the appliance as a whole (disabled by default)

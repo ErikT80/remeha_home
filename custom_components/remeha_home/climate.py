@@ -18,10 +18,12 @@ from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+import homeassistant.util.dt as dt_util
 
 from .api import RemehaHomeAPI
 from .const import DOMAIN
 from .coordinator import RemehaHomeUpdateCoordinator
+from .util import remeha_utc_time
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -153,6 +155,14 @@ class RemehaHomeClimateEntity(CoordinatorEntity, ClimateEntity):
     def device_info(self) -> DeviceInfo:
         """Return device info for this device."""
         return self.coordinator.get_device_info(self.climate_zone_id)
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return the end of a temporary override, None when there is none."""
+        end = remeha_utc_time(
+            (self._data.get("temporaryOverride") or {}).get("endTime")
+        )
+        return {"override_end_time": dt_util.as_local(end).isoformat() if end else None}
 
     def _get_appliance_data(self) -> dict | None:
         """Get the appliance data for this climate zone."""
