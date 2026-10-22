@@ -55,7 +55,8 @@ def remeha_time(value: str | None) -> datetime | None:
     """Convert a Remeha API time to an aware datetime.
 
     The API sends local times with a 'Z' suffix, and a time in the year 1
-    (0001-01-01T00:00:00Z) for "not set".
+    (0001-01-01T00:00:00Z) for "not set". The boost end time and the end of a
+    temporary override are the exceptions, use remeha_utc_time() for those.
     """
     if not value or str(value).startswith("0001-"):
         return None
@@ -63,3 +64,21 @@ def remeha_time(value: str | None) -> datetime | None:
     if parsed is None:
         return None
     return parsed.replace(tzinfo=dt_util.DEFAULT_TIME_ZONE)
+
+
+def remeha_utc_time(value: str | None) -> datetime | None:
+    """Convert a Remeha API time in UTC to an aware datetime.
+
+    Unlike the other times of the API, the boost end time and the end of a
+    temporary override are in UTC. Measured on a live system: a temporary
+    override until the schedule resumes at 22:00 CEST ends at 20:00:00Z, and a
+    30 minute boost started at 14:41:59 CEST ends at 13:11:59.2692621Z.
+    """
+    if not value or str(value).startswith("0001-"):
+        return None
+    parsed = dt_util.parse_datetime(str(value))
+    if parsed is None:
+        return None
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=dt_util.UTC)
+    return parsed
