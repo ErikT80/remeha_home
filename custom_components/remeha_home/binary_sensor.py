@@ -3,6 +3,9 @@
 from __future__ import annotations
 import logging
 from collections.abc import Callable
+from datetime import date, datetime
+
+import voluptuous as vol
 
 
 from homeassistant.components.binary_sensor import (
@@ -11,10 +14,15 @@ from homeassistant.components.binary_sensor import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ServiceValidationError
+from homeassistant.helpers import config_validation as cv, entity_platform
+from homeassistant.helpers.event import async_call_later
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.util import dt as dt_util
 
+from .api import RemehaHomeAPI
 from .const import (
     DOMAIN,
     CLIMATE_ZONE_BINARY_SENSOR_TYPES,
@@ -24,15 +32,56 @@ from .coordinator import RemehaHomeUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
+SERVICE_SET_HOLIDAY_MODE = "set_holiday_mode"
+SERVICE_CANCEL_HOLIDAY_MODE = "cancel_holiday_mode"
+ATTR_START_DATE = "start_date"
+ATTR_END_DATE = "end_date"
+
+# The API applies changes a few seconds after the request
+REFRESH_DELAY = 15
+
+# The API reports 0001-01-01T00:00:0xZ when no holiday is set
+_EMPTY_HOLIDAY_YEAR = 1
+
+
+def _parse_holiday_time(value: str | None) -> datetime | None:
+    """Parse a holiday time from the API, mapping the empty value to None."""
+    if not value:
+        return None
+    parsed = dt_util.parse_datetime(value)
+    if parsed is None or parsed.year == _EMPTY_HOLIDAY_YEAR:
+        return None
+    return parsed
+
 
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     """Set up the Remeha Home sensor entities from a config entry."""
     coordinator = hass.data[DOMAIN][entry.entry_id]["coordinator"]
+    api = hass.data[DOMAIN][entry.entry_id]["api"]
+
+    platform = entity_platform.async_get_current_platform()
+    platform.async_register_entity_service(
+        SERVICE_SET_HOLIDAY_MODE,
+        {
+            vol.Required(ATTR_START_DATE): cv.date,
+            vol.Required(ATTR_END_DATE): cv.date,
+        },
+        "async_set_holiday_mode",
+    )
+    platform.async_register_entity_service(
+        SERVICE_CANCEL_HOLIDAY_MODE, {}, "async_cancel_holiday_mode"
+    )
 
     entities = []
     for appliance in coordinator.data["appliances"]:
+        entities.append(
+            RemehaHomeHolidayModeBinarySensor(
+                coordinator, api, appliance["applianceId"]
+            )
+        )
+
         for climate_zone in appliance["climateZones"]:
             climate_zone_id = climate_zone["climateZoneId"]
             for (
@@ -103,3 +152,71 @@ class RemehaHomeBinarySensor(CoordinatorEntity, BinarySensorEntity):
     def device_info(self) -> DeviceInfo:
         """Return device info for this device."""
         return self.coordinator.get_device_info(self.item_id)
+
+
+class RemehaHomeHolidayModeBinarySensor(CoordinatorEntity, BinarySensorEntity):
+    """Holiday mode of an appliance, with services to schedule and cancel it."""
+
+    _attr_has_entity_name = True
+    _attr_name = "Holiday Mode"
+    _attr_icon = "mdi:beach"
+
+    def __init__(
+        self,
+        coordinator: RemehaHomeUpdateCoordinator,
+        api: RemehaHomeAPI,
+        appliance_id: str,
+    ) -> None:
+        """Create a Remeha Home holiday mode binary sensor."""
+        super().__init__(coordinator)
+        self.api = api
+        self.appliance_id = appliance_id
+        self._attr_unique_id = "_".join([DOMAIN, appliance_id, "holidaySchedule"])
+
+    @property
+    def _schedule(self) -> dict:
+        return self.coordinator.get_by_id(self.appliance_id).get("holidaySchedule") or {}
+
+    @property
+    def is_on(self) -> bool:
+        """Return true while holiday mode is active."""
+        return bool(self._schedule.get("active"))
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        """Return the scheduled holiday period (None when not set)."""
+        start = _parse_holiday_time(self._schedule.get("startTime"))
+        end = _parse_holiday_time(self._schedule.get("endTime"))
+        return {
+            ATTR_START_DATE: start.date().isoformat() if start else None,
+            ATTR_END_DATE: end.date().isoformat() if end else None,
+        }
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Return device info for this device."""
+        return self.coordinator.get_device_info(self.appliance_id)
+
+    async def async_set_holiday_mode(self, start_date: date, end_date: date) -> None:
+        """Schedule holiday mode from start_date to end_date (whole days)."""
+        if end_date <= start_date:
+            raise ServiceValidationError("end_date must be after start_date")
+        if end_date <= dt_util.now().date():
+            raise ServiceValidationError("end_date must be in the future")
+
+        await self.api.async_set_holiday_schedule(self.appliance_id, start_date, end_date)
+        await self._async_refresh_soon()
+
+    async def async_cancel_holiday_mode(self) -> None:
+        """Cancel holiday mode (active or scheduled)."""
+        await self.api.async_cancel_holiday_schedule(self.appliance_id)
+        await self._async_refresh_soon()
+
+    async def _async_refresh_soon(self) -> None:
+        """Refresh now and again once the API has applied the change."""
+        await self.coordinator.async_request_refresh()
+
+        async def _refresh(_now: datetime) -> None:
+            await self.coordinator.async_request_refresh()
+
+        async_call_later(self.hass, REFRESH_DELAY, _refresh)
