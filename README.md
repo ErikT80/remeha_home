@@ -1,6 +1,10 @@
 # Remeha Home integration for Home Assistant
 This integration lets you control your Remeha Home thermostats from Home Assistant.
 
+This is a fork of [msvisser/remeha_home](https://github.com/msvisser/remeha_home), which is no longer actively maintained.
+It adds hot water control, heat pump and cooling support, energy data per heat source, holiday mode and more, collected from community pull requests and tested on a live system.
+Please report problems in the [issues of this repository](https://github.com/hugo-leij/remeha_home/issues).
+
 **Before using this integration, make sure you have set up your thermostat in the [Remeha Home](https://play.google.com/store/apps/details?id=com.bdrthermea.application.remeha) app.**
 If you are unable to use the Remeha Home app for your thermostat, this integration will not work.
 
@@ -22,14 +26,16 @@ You can simply log in using the credentials that you would use in the respective
 - Each climate zone also exposes the following sensors/switches/numbers:
     - The room temperature
     - The status (e.g. heating or idle), plus a binary status sensor (disabled by default)
+    - Pre-heat (binary sensor, if reported by the appliance): on while the zone starts heating early to reach the next setpoint of the clock program on time
     - The next schedule setpoint
     - The time at which the next schedule setpoint gets activated
     - The current schedule setpoint
+    - The end time of a temporary override (unknown when there is none), also as the `override_end_time` attribute of the climate entity
     - Switch to control fireplace mode
     - The heating curve slope and base setpoint (if supported by the appliance)
     - The temperatures of the heating activities used in the clock programs
 - Each hot water zone exposes:
-    - The water temperature (if reported by the appliance)
+    - The water temperature. Combi boilers that don't report it get no water temperature sensor.
     - The current activity (Comfort or Eco)
     - The status, plus a binary status sensor (both disabled by default)
     - The time at which the next schedule setpoint gets activated
@@ -38,8 +44,10 @@ You can simply log in using the credentials that you would use in the respective
     - Setpoint numbers for the Comfort and Eco temperatures. The Eco temperature is only available for a hot water tank: a combi boiler doesn't keep water warm in Eco, so Remeha has no Eco temperature for it.
     - A Boost switch to start and stop boost (if supported by the appliance). Remeha only accepts boost while the zone is in Schedule mode, so the switch gives an error in other modes. Stopping boost returns the zone to Schedule. While boosting, the water heater shows the Boost mode and its `remaining_boost_time` attribute shows how long it still runs.
 - Each appliance (boiler or heat pump) exposes the following sensors:
-    - The water pressure
+    - The water pressure, and a Water Pressure problem sensor that turns on when Remeha reports that the pressure is not OK
+    - Whether the appliance is online (diagnostic)
     - The thermal mode (e.g. heating, cooling or idle)
+    - The error status reported by Remeha (e.g. Running)
     - The outdoor temperature measured by the appliance, and the outdoor temperature from the Remeha cloud (disabled by default)
     - Holiday mode (binary sensor), with the scheduled `start_date` and `end_date` as attributes, and actions to schedule and cancel a holiday. See [Holiday mode](#holiday-mode).
     - The energy consumed and delivered today for heating, hot water and cooling, for the appliance as a whole (disabled by default)
@@ -53,19 +61,26 @@ You can simply log in using the credentials that you would use in the respective
 ## Installation
 
 ### Install with HACS (recommended)
-[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=msvisser&repository=remeha_home&category=integration)
+This fork is not in the default list of [HACS](https://hacs.xyz/), so you add it as a custom repository.
+Click the button, or follow the steps below.
 
-Do you have [HACS](https://hacs.xyz/) installed?
-Click the button or follow the instructions.
-1. Search integrations for **Remeha Home**
-1. Click `Install`
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=hugo-leij&repository=remeha_home&category=integration)
+
+1. In HACS, open the menu (⋮) and choose **Custom repositories**
+1. Add `https://github.com/hugo-leij/remeha_home` with type **Integration**
+1. Search for **Remeha Home**, open it and click **Download**
 1. Restart Home Assistant
 1. See [Setup](#setup)
 
-### Install manually
+Do you already have the original version (msvisser/remeha_home) installed through HACS?
+Remove it in HACS first, then download this version: HACS can't track two repositories for the same integration.
 
-1. Install this platform by creating a `custom_components` folder in the same folder as your configuration.yaml, if it doesn't already exist.
-2. Create another folder `remeha_home` in the `custom_components` folder. Copy all files from `custom_components/remeha_home` into the `remeha_home` folder.
+### Install manually
+1. Download `remeha_home.zip` from the [latest release](https://github.com/hugo-leij/remeha_home/releases/latest)
+1. Create a `custom_components/remeha_home` folder in the folder that contains your `configuration.yaml`, if it doesn't exist yet
+1. Extract the zip file into that `remeha_home` folder
+1. Restart Home Assistant
+1. See [Setup](#setup)
 
 ## Setup
 1. In Home Assistant click on `Settings`
@@ -129,6 +144,14 @@ sequence:
 Add both scripts to a dashboard, for example with an Entities card.
 Click the name of Set holiday mode (not its Run button) to open a dialog where you pick the dates and run the script.
 Cancel holiday mode only needs its Run button.
+
+## Tests
+The tests use the Home Assistant test tools for custom integrations, with anonymized responses of the Remeha API in `tests/fixtures`.
+They run on every pull request. To run them yourself (Python 3.14):
+```bash
+python3 -m pip install -r requirements_test.txt
+python3 -m pytest
+```
 
 ## API documentation
 For information on the Remeha Home API see [API documentation](documentation/api.md).
