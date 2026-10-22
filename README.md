@@ -29,7 +29,7 @@ You can simply log in using the credentials that you would use in the respective
     - The heating curve slope and base setpoint (if supported by the appliance)
     - The temperatures of the heating activities used in the clock programs
 - Each hot water zone exposes:
-    - The water temperature (if reported by the appliance)
+    - The water temperature. Combi boilers that don't report it get no water temperature sensor.
     - The current activity (Comfort or Eco)
     - The status, plus a binary status sensor (both disabled by default)
     - The time at which the next schedule setpoint gets activated

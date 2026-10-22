@@ -30,7 +30,7 @@ from .coordinator import (
     get_producer_id,
     get_producers,
 )
-from .util import remeha_time
+from .util import remeha_time, reports_dhw_temperature
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -69,6 +69,12 @@ async def async_setup_entry(
         for hot_water_zone in appliance["hotWaterZones"]:
             hot_water_zone_id = hot_water_zone["hotWaterZoneId"]
             for entity_description in HOT_WATER_ZONE_SENSOR_TYPES:
+                if entity_description.key == "dhwTemperature" and not (
+                    reports_dhw_temperature(hot_water_zone)
+                ):
+                    # It would always be unknown, also remove the one created before
+                    _async_remove_sensor(hass, hot_water_zone_id, entity_description.key)
+                    continue
                 entities.append(
                     RemehaHomeSensor(coordinator, hot_water_zone_id, entity_description)
                 )
@@ -113,14 +119,17 @@ def _async_remove_replaced_sensors(
     hass: HomeAssistant, coordinator: RemehaHomeUpdateCoordinator
 ) -> None:
     """Remove the totals per energy type, replaced by the producer devices."""
-    entity_registry = er.async_get(hass)
     for appliance in coordinator.data["appliances"]:
         for key in REMOVED_APPLIANCE_SENSOR_KEYS:
-            unique_id = "_".join([DOMAIN, appliance["applianceId"], key])
-            if entity_id := entity_registry.async_get_entity_id(
-                "sensor", DOMAIN, unique_id
-            ):
-                entity_registry.async_remove(entity_id)
+            _async_remove_sensor(hass, appliance["applianceId"], key)
+
+
+def _async_remove_sensor(hass: HomeAssistant, item_id: str, key: str) -> None:
+    """Remove a sensor that is no longer created from the entity registry."""
+    entity_registry = er.async_get(hass)
+    unique_id = "_".join([DOMAIN, item_id, key])
+    if entity_id := entity_registry.async_get_entity_id("sensor", DOMAIN, unique_id):
+        entity_registry.async_remove(entity_id)
 
 
 class RemehaHomeSensor(CoordinatorEntity, SensorEntity):

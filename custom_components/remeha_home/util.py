@@ -40,6 +40,17 @@ def supports_reduced_setpoint(hot_water_zone: dict) -> bool:
     return hot_water_zone.get("dhwType", "Tank") == "Tank"
 
 
+def reports_dhw_temperature(hot_water_zone: dict) -> bool:
+    """Return whether a hot water zone reports its water temperature.
+
+    A combi boiler has no hot water tank, and Remeha reports no temperature for it.
+    """
+    return not (
+        hot_water_zone.get("dhwType") == "Combi"
+        and hot_water_zone.get("dhwTemperature") is None
+    )
+
+
 def remeha_time(value: str | None) -> datetime | None:
     """Convert a Remeha API time to an aware datetime.
 
