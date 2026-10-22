@@ -15,7 +15,6 @@ from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
-import homeassistant.util.dt as dt_util
 
 from .const import (
     APPLIANCE_SENSOR_TYPES,
@@ -31,8 +30,12 @@ from .coordinator import (
     get_producer_id,
     get_producers,
 )
+from .util import remeha_time, remeha_utc_time, reports_dhw_temperature
 
 _LOGGER = logging.getLogger(__name__)
+
+# Times that the API sends in UTC, the other times are local times
+UTC_TIME_KEYS = {"temporaryOverride.endTime"}
 
 # Totals per energy type on the appliance, replaced by the sensors of the producer devices
 REMOVED_APPLIANCE_SENSOR_KEYS = [
@@ -69,6 +72,12 @@ async def async_setup_entry(
         for hot_water_zone in appliance["hotWaterZones"]:
             hot_water_zone_id = hot_water_zone["hotWaterZoneId"]
             for entity_description in HOT_WATER_ZONE_SENSOR_TYPES:
+                if entity_description.key == "dhwTemperature" and not (
+                    reports_dhw_temperature(hot_water_zone)
+                ):
+                    # It would always be unknown, also remove the one created before
+                    _async_remove_sensor(hass, hot_water_zone_id, entity_description.key)
+                    continue
                 entities.append(
                     RemehaHomeSensor(coordinator, hot_water_zone_id, entity_description)
                 )
@@ -113,14 +122,17 @@ def _async_remove_replaced_sensors(
     hass: HomeAssistant, coordinator: RemehaHomeUpdateCoordinator
 ) -> None:
     """Remove the totals per energy type, replaced by the producer devices."""
-    entity_registry = er.async_get(hass)
     for appliance in coordinator.data["appliances"]:
         for key in REMOVED_APPLIANCE_SENSOR_KEYS:
-            unique_id = "_".join([DOMAIN, appliance["applianceId"], key])
-            if entity_id := entity_registry.async_get_entity_id(
-                "sensor", DOMAIN, unique_id
-            ):
-                entity_registry.async_remove(entity_id)
+            _async_remove_sensor(hass, appliance["applianceId"], key)
+
+
+def _async_remove_sensor(hass: HomeAssistant, item_id: str, key: str) -> None:
+    """Remove a sensor that is no longer created from the entity registry."""
+    entity_registry = er.async_get(hass)
+    unique_id = "_".join([DOMAIN, item_id, key])
+    if entity_id := entity_registry.async_get_entity_id("sensor", DOMAIN, unique_id):
+        entity_registry.async_remove(entity_id)
 
 
 class RemehaHomeSensor(CoordinatorEntity, SensorEntity):
@@ -151,7 +163,7 @@ class RemehaHomeSensor(CoordinatorEntity, SensorEntity):
         data = self._data
         for part in self.entity_description.key.split("."):
             # If the key is missing for some reason, don't crash, instead return None
-            if part not in data:
+            if not isinstance(data, dict) or part not in data:
                 _LOGGER.debug(
                     "Key not found in data: %s", self.entity_description.key
                 )
@@ -160,9 +172,9 @@ class RemehaHomeSensor(CoordinatorEntity, SensorEntity):
         value = data
 
         if self.entity_description.device_class == SensorDeviceClass.TIMESTAMP:
-            return dt_util.parse_datetime(value).replace(
-                tzinfo=dt_util.DEFAULT_TIME_ZONE
-            )
+            if self.entity_description.key in UTC_TIME_KEYS:
+                return remeha_utc_time(value)
+            return remeha_time(value)
 
         return value
 

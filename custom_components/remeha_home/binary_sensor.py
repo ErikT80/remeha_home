@@ -4,6 +4,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Callable
 from datetime import date, datetime
+from typing import Any
 
 import voluptuous as vol
 
@@ -25,10 +26,12 @@ from homeassistant.util import dt as dt_util
 from .api import RemehaHomeAPI
 from .const import (
     DOMAIN,
+    APPLIANCE_BINARY_SENSOR_TYPES,
     CLIMATE_ZONE_BINARY_SENSOR_TYPES,
     HOT_WATER_ZONE_BINARY_SENSOR_TYPES,
 )
 from .coordinator import RemehaHomeUpdateCoordinator
+from .util import remeha_time
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -39,19 +42,6 @@ ATTR_END_DATE = "end_date"
 
 # The API applies changes a few seconds after the request
 REFRESH_DELAY = 15
-
-# The API reports 0001-01-01T00:00:0xZ when no holiday is set
-_EMPTY_HOLIDAY_YEAR = 1
-
-
-def _parse_holiday_time(value: str | None) -> datetime | None:
-    """Parse a holiday time from the API, mapping the empty value to None."""
-    if not value:
-        return None
-    parsed = dt_util.parse_datetime(value)
-    if parsed is None or parsed.year == _EMPTY_HOLIDAY_YEAR:
-        return None
-    return parsed
 
 
 async def async_setup_entry(
@@ -76,43 +66,60 @@ async def async_setup_entry(
 
     entities = []
     for appliance in coordinator.data["appliances"]:
+        appliance_id = appliance["applianceId"]
         entities.append(
-            RemehaHomeHolidayModeBinarySensor(
-                coordinator, api, appliance["applianceId"]
+            RemehaHomeHolidayModeBinarySensor(coordinator, api, appliance_id)
+        )
+        entities.extend(
+            _binary_sensors(
+                coordinator, appliance, appliance_id, APPLIANCE_BINARY_SENSOR_TYPES
             )
         )
 
         for climate_zone in appliance["climateZones"]:
-            climate_zone_id = climate_zone["climateZoneId"]
-            for (
-                entity_description,
-                transform_func,
-            ) in CLIMATE_ZONE_BINARY_SENSOR_TYPES:
-                entities.append(
-                    RemehaHomeBinarySensor(
-                        coordinator,
-                        climate_zone_id,
-                        entity_description,
-                        transform_func,
-                    )
+            entities.extend(
+                _binary_sensors(
+                    coordinator,
+                    climate_zone,
+                    climate_zone["climateZoneId"],
+                    CLIMATE_ZONE_BINARY_SENSOR_TYPES,
                 )
+            )
 
         for hot_water_zone in appliance["hotWaterZones"]:
-            hot_water_zone_id = hot_water_zone["hotWaterZoneId"]
-            for (
-                entity_description,
-                transform_func,
-            ) in HOT_WATER_ZONE_BINARY_SENSOR_TYPES:
-                entities.append(
-                    RemehaHomeBinarySensor(
-                        coordinator,
-                        hot_water_zone_id,
-                        entity_description,
-                        transform_func,
-                    )
+            entities.extend(
+                _binary_sensors(
+                    coordinator,
+                    hot_water_zone,
+                    hot_water_zone["hotWaterZoneId"],
+                    HOT_WATER_ZONE_BINARY_SENSOR_TYPES,
                 )
+            )
 
     async_add_entities(entities)
+
+
+def _lookup(data: dict | None, key: str) -> tuple[bool, Any]:
+    """Return whether the data has the (dotted) key, and its value."""
+    for part in key.split("."):
+        if not isinstance(data, dict) or part not in data:
+            return False, None
+        data = data[part]
+    return True, data
+
+
+def _binary_sensors(
+    coordinator: RemehaHomeUpdateCoordinator,
+    data: dict,
+    item_id: str,
+    sensor_types: list,
+) -> list[RemehaHomeBinarySensor]:
+    """Return the binary sensors of an item, for the values that it reports."""
+    return [
+        RemehaHomeBinarySensor(coordinator, item_id, entity_description, transform_func)
+        for entity_description, transform_func in sensor_types
+        if _lookup(data, entity_description.key)[0]
+    ]
 
 
 class RemehaHomeBinarySensor(CoordinatorEntity, BinarySensorEntity):
@@ -140,13 +147,13 @@ class RemehaHomeBinarySensor(CoordinatorEntity, BinarySensorEntity):
         return self.coordinator.get_by_id(self.item_id)
 
     @property
-    def is_on(self) -> bool:
-        """Return the measurement value for this sensor."""
-        data = self._data
-        for part in self.entity_description.key.split("."):
-            data = data[part]
+    def is_on(self) -> bool | None:
+        """Return the measurement value for this sensor, or None when not reported."""
+        found, value = _lookup(self._data, self.entity_description.key)
+        if not found or value is None:
+            return None
 
-        return self.transform_func(data)
+        return self.transform_func(value)
 
     @property
     def device_info(self) -> DeviceInfo:
@@ -185,8 +192,9 @@ class RemehaHomeHolidayModeBinarySensor(CoordinatorEntity, BinarySensorEntity):
     @property
     def extra_state_attributes(self) -> dict:
         """Return the scheduled holiday period (None when not set)."""
-        start = _parse_holiday_time(self._schedule.get("startTime"))
-        end = _parse_holiday_time(self._schedule.get("endTime"))
+        # The API reports 0001-01-01T00:00:01Z when no holiday is set
+        start = remeha_time(self._schedule.get("startTime"))
+        end = remeha_time(self._schedule.get("endTime"))
         return {
             ATTR_START_DATE: start.date().isoformat() if start else None,
             ATTR_END_DATE: end.date().isoformat() if end else None,

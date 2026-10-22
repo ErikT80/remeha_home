@@ -24,7 +24,11 @@ import homeassistant.util.dt as dt_util
 from .api import RemehaHomeAPI
 from .const import DOMAIN
 from .coordinator import RemehaHomeUpdateCoordinator
-from .util import detect_dhw_setpoint_activity, supports_reduced_setpoint
+from .util import (
+    detect_dhw_setpoint_activity,
+    remeha_utc_time,
+    supports_reduced_setpoint,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -184,16 +188,10 @@ class RemehaHomeWaterHeater(CoordinatorEntity, WaterHeaterEntity):
         """Return the remaining boost time in minutes, or None when not boosting."""
         if self._data.get("dhwZoneMode") != "Boost":
             return None
-        end_time = self._data.get("boostModeEndTime")
-        if not end_time:
+        end_time = remeha_utc_time(self._data.get("boostModeEndTime"))
+        if end_time is None:
             return None
-        parsed = dt_util.parse_datetime(end_time)
-        # Guard against the API's sentinel "0001-01-01" timestamps.
-        if parsed is None or parsed.year <= 1:
-            return None
-        if parsed.tzinfo is None:
-            parsed = parsed.replace(tzinfo=dt_util.DEFAULT_TIME_ZONE)
-        remaining = (parsed - dt_util.utcnow()).total_seconds()
+        remaining = (end_time - dt_util.utcnow()).total_seconds()
         if remaining <= 0:
             return None
         return int(remaining / 60)
