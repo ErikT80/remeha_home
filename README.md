@@ -134,5 +134,13 @@ Add both scripts to a dashboard, for example with an Entities card.
 Click the name of Set holiday mode (not its Run button) to open a dialog where you pick the dates and run the script.
 Cancel holiday mode only needs its Run button.
 
+## Tests
+The tests use the Home Assistant test tools for custom integrations, with anonymized responses of the Remeha API in `tests/fixtures`.
+They run on every pull request. To run them yourself (Python 3.14):
+```bash
+python3 -m pip install -r requirements_test.txt
+python3 -m pytest
+```
+
 ## API documentation
 For information on the Remeha Home API see [API documentation](documentation/api.md).
