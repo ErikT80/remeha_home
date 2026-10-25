@@ -19,6 +19,7 @@ The [API documentation](documentation/api.md) describes the calls and responses.
 | `climate.py`, `water_heater.py`, `sensor.py`, `binary_sensor.py`, `switch.py`, `number.py` | The entities of each platform |
 | `const.py` | The descriptions of the sensors and binary sensors |
 | `util.py` | Helpers, such as reading the times of the API |
+| `diagnostics.py` | The diagnostics download, with personal data redacted |
 | `services.yaml` | The holiday mode actions |
 | `translations/` | Names and messages in English, French, Dutch and Polish |
 
@@ -35,6 +36,8 @@ Some things to know:
 - The `key` of a sensor description in `const.py` is the field in the API response. A dot goes one level deeper, e.g. `outdoorTemperatureInformation.applianceOutdoorTemperature`.
 - Unique ids look like `remeha_home_<id>_<key>`. Don't change them: users would get new entities and lose their history.
 - Most times from the API are local times with a `Z` suffix, but some are in UTC. Use `util.remeha_time()` and `util.remeha_utc_time()`; see [Times](documentation/api.md#times).
+- The diagnostics contain the data that the coordinator holds. When you store new data that can identify a person or an appliance, such as a name or a serial number, add its key to `TO_REDACT` in `diagnostics.py`.
+- A user's diagnostics download shows what their appliance returns. With the ids anonymized, its API responses can become a test fixture; the [README](README.md#diagnostics) says which parts are API responses and what the integration adds.
 
 ## Development environment
 

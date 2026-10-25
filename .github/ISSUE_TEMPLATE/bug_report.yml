@@ -69,6 +69,17 @@ body:
       required: true
 
   - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostics
+      description: |
+        The diagnostics show the data that the integration gets from Remeha, which helps most to find the cause.
+        Go to Settings → Devices & services → Remeha Home, choose ⋮ → Download diagnostics, and drag the file into this field.
+        Your email address, the login token, the names of your home and zones, and the serial numbers are left out of the file.
+    validations:
+      required: false
+
+  - type: textarea
     id: logs
     attributes:
       label: Logs
