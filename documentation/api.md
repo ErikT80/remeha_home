@@ -99,7 +99,9 @@ The available fields differ per appliance. The most important ones:
 | `dhwTemperature` | Water temperature, `null` for a combi boiler |
 | `comfortSetPoint`, `reducedSetpoint`, `targetSetpoint` | The Comfort and Eco setpoints, and the setpoint that applies now |
 | `setPointRanges` | Minimum and maximum of the Comfort and Eco setpoints |
-| `nextSwitchTime`, `nextSwitchActivity` | When the clock program switches next (local time), and to which activity |
+| `nextSwitchTime`, `nextSwitchActivity` | When the clock program switches next (local time), and to which activity: `Comfort` or `Reduced` (Eco in the app) |
+| `activeDwhTimeProgramNumber` | The active clock program of the hot water zone, `1` on the measured systems |
+| `optimizationEnabled` | Whether hot water optimization is enabled. Not reported by every appliance; `capabilityDhwOptimization` of the appliance says whether it supports it. Both `false` on the measured hybrid |
 | `boostModeEndTime` | End of a boost (UTC), `null` when not boosting |
 
 <details>

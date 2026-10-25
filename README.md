@@ -39,7 +39,9 @@ You can simply log in using the credentials that you would use in the respective
     - The water temperature. Combi boilers that don't report it get no water temperature sensor.
     - The current activity (Comfort or Eco)
     - The status, plus a binary status sensor (both disabled by default)
-    - The time at which the next schedule setpoint gets activated
+    - The time at which the next schedule setpoint gets activated, and the next activity of the clock program (Comfort or Eco). The API also reports both when the zone doesn't follow the clock program, e.g. in Eco mode.
+    - The number of the active hot water clock program (diagnostic), shown with the names of the presets of the climate entity (Schedule 1 to 3)
+    - Whether hot water optimization is enabled (binary sensor, diagnostic, if supported by the appliance)
     - Water heater control with modes (Schedule, Comfort, Eco) and target temperature, the same modes as in the Remeha Home app.
     The target temperature is the setpoint of the active activity, Comfort or Eco.
     - Setpoint numbers for the Comfort and Eco temperatures. The Eco temperature is only available for a hot water tank: a combi boiler doesn't keep water warm in Eco, so Remeha has no Eco temperature for it.

@@ -57,6 +57,14 @@
         "sensor": {
             "heating_curve_max_flow_temperature": {
                 "name": "Température de départ maximale de la courbe de chauffe"
+            },
+            "clock_program": {
+                "name": "Programme horaire",
+                "state": {
+                    "clock_program_1": "Programme 1",
+                    "clock_program_2": "Programme 2",
+                    "clock_program_3": "Programme 3"
+                }
             }
         }
     },
