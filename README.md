@@ -3,7 +3,7 @@ This integration lets you control your Remeha Home thermostats from Home Assista
 
 This is a fork of [msvisser/remeha_home](https://github.com/msvisser/remeha_home), which is no longer actively maintained.
 It adds hot water control, heat pump and cooling support, energy data per heat source, holiday mode and more, collected from community pull requests and tested on a live system.
-Please report problems in the [issues of this repository](https://github.com/hugo-leij/remeha_home/issues).
+Please report problems in the [issues of this repository](https://github.com/hugo-leij/remeha_home/issues), and attach the [diagnostics](#diagnostics) if you can.
 
 **Before using this integration, make sure you have set up your thermostat in the [Remeha Home](https://play.google.com/store/apps/details?id=com.bdrthermea.application.remeha) app.**
 If you are unable to use the Remeha Home app for your thermostat, this integration will not work.
@@ -39,7 +39,9 @@ You can simply log in using the credentials that you would use in the respective
     - The water temperature. Combi boilers that don't report it get no water temperature sensor.
     - The current activity (Comfort or Eco)
     - The status, plus a binary status sensor (both disabled by default)
-    - The time at which the next schedule setpoint gets activated
+    - The time at which the next schedule setpoint gets activated, and the next activity of the clock program (Comfort or Eco). The API also reports both when the zone doesn't follow the clock program, e.g. in Eco mode.
+    - The number of the active hot water clock program (diagnostic), shown with the names of the presets of the climate entity (Schedule 1 to 3)
+    - Whether hot water optimization is enabled (binary sensor, diagnostic, if supported by the appliance)
     - Water heater control with modes (Schedule, Comfort, Eco) and target temperature, the same modes as in the Remeha Home app.
     The target temperature is the setpoint of the active activity, Comfort or Eco.
     - Setpoint numbers for the Comfort and Eco temperatures. The Eco temperature is only available for a hot water tank: a combi boiler doesn't keep water warm in Eco, so Remeha has no Eco temperature for it.
@@ -48,6 +50,7 @@ You can simply log in using the credentials that you would use in the respective
     - The water pressure, and a Water Pressure problem sensor that turns on when Remeha reports that the pressure is not OK
     - Whether the appliance is online (diagnostic)
     - The thermal mode (e.g. heating, cooling or idle)
+    - The operating mode (e.g. AutomaticHeating): what the appliance is set to do, where the thermal mode shows what it is doing now
     - The error status reported by Remeha (e.g. Running)
     - The outdoor temperature measured by the appliance, and the outdoor temperature from the Remeha cloud (disabled by default)
     - Holiday mode (binary sensor), with the scheduled `start_date` and `end_date` as attributes, and actions to schedule and cancel a holiday. See [Holiday mode](#holiday-mode).
@@ -146,6 +149,19 @@ sequence:
 Add both scripts to a dashboard, for example with an Entities card.
 Click the name of Set holiday mode (not its Run button) to open a dialog where you pick the dates and run the script.
 Cancel holiday mode only needs its Run button.
+
+## Diagnostics
+The diagnostics show the data that the integration holds, which helps to find the cause of a problem.
+To download them, go to **Settings → Devices & services → Remeha Home**, open the menu (⋮) of the entry and choose **Download diagnostics**.
+
+The file contains the dashboard as the integration holds it, the technical details of each appliance and the activities of each climate zone.
+The technical details, the activities and the heating curves are the responses of the API, as in the [API documentation](documentation/api.md).
+The dashboard is the API response with three additions:
+- The energy consumption of today of each appliance (`consumptionData`), as the sensors use it: the heating and hot water of a gas boiler in m³ (its total stays in kWh), and `null` values of a heat source replaced by 0.
+- The heating curve of each climate zone (`heatingCurve`).
+- The current activity of each hot water zone (`dhwCurrentActivity`).
+
+Your email address, the login token, the names of your home, zones and activities, and the serial numbers of the hardware are replaced by `**REDACTED**`, so you can attach the file to an issue.
 
 ## Tests
 The tests use the Home Assistant test tools for custom integrations, with anonymized responses of the Remeha API in `tests/fixtures`.

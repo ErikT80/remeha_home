@@ -1,4 +1,4 @@
-"""Test the error status and override end sensors."""
+"""Test the error status, operating mode and override end sensors."""
 
 from __future__ import annotations
 
@@ -36,6 +36,33 @@ async def test_error_status(
     appliance["errorStatus"] = "Error"
     await refresh(hass, config_entry)
     assert hass.states.get(sensor).state == "Error"
+
+
+async def test_operating_mode(
+    hass: HomeAssistant, config_entry, mock_api, appliance, caplog
+) -> None:
+    """The Operating Mode sensor shows what the appliance is set to do.
+
+    The thermal mode shows what it is doing now: the fixture is idle in AutomaticHeating.
+    """
+    await setup_integration(hass, config_entry, mock_api)
+    sensor = entity_id(hass, "sensor", APPLIANCE_ID, "operatingMode")
+    assert hass.states.get(sensor).state == "AutomaticHeating"
+    thermal_mode = entity_id(hass, "sensor", APPLIANCE_ID, "activeThermalMode")
+    assert hass.states.get(thermal_mode).state == "Idle"
+
+    appliance["operatingMode"] = "Off"
+    await refresh(hass, config_entry)
+    assert hass.states.get(sensor).state == "Off"
+
+    appliance["operatingMode"] = None
+    await refresh(hass, config_entry)
+    assert hass.states.get(sensor).state == STATE_UNKNOWN
+
+    del appliance["operatingMode"]
+    await refresh(hass, config_entry)
+    assert hass.states.get(sensor).state == STATE_UNKNOWN
+    assert not [r for r in caplog.records if r.levelno >= logging.ERROR]
 
 
 async def test_no_override(hass: HomeAssistant, config_entry, mock_api) -> None:

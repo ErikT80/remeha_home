@@ -8,10 +8,14 @@
         },
         "step": {
             "auth": {
+                "description": "Configurez l'intégration Remeha Home avec les identifiants de votre compte Remeha Home.",
                 "data": {
-                    "email": "Addresse e-mail",
+                    "email": "Adresse e-mail",
                     "password": "Mot de passe"
                 }
+            },
+            "reauth_confirm": {
+                "description": "Impossible d'actualiser le jeton d'accès Remeha Home. Reconnectez-vous avec vos identifiants Remeha Home pour continuer à utiliser cette intégration."
             }
         }
     },
@@ -57,6 +61,14 @@
         "sensor": {
             "heating_curve_max_flow_temperature": {
                 "name": "Température de départ maximale de la courbe de chauffe"
+            },
+            "clock_program": {
+                "name": "Programme horaire",
+                "state": {
+                    "clock_program_1": "Programme 1",
+                    "clock_program_2": "Programme 2",
+                    "clock_program_3": "Programme 3"
+                }
             }
         }
     },
