@@ -32,6 +32,11 @@ APPLIANCE_SENSOR_TYPES = [
         name="Thermal Mode",
     ),
     SensorEntityDescription(
+        # What the appliance is set to do, the thermal mode is what it is doing now
+        key="operatingMode",
+        name="Operating Mode",
+    ),
+    SensorEntityDescription(
         key="errorStatus",
         name="Error Status",
         icon="mdi:alert-circle-outline",

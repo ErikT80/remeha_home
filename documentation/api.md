@@ -77,8 +77,8 @@ The available fields differ per appliance. The most important ones:
 | `applianceType` | e.g. `Boiler` or `HeatPump` |
 | `applianceOnline` | `true` while the appliance is connected |
 | `errorStatus` | e.g. `Running` |
-| `operatingMode` | e.g. `AutomaticHeating` |
-| `activeThermalMode` | e.g. `Idle` or `Cooling` |
+| `operatingMode` | e.g. `AutomaticHeating`: what the appliance is set to do |
+| `activeThermalMode` | e.g. `Idle`, `HeatingCH`, `HeatingDHW` or `Cooling`: what the appliance is doing now |
 | `waterPressure`, `waterPressureOK` | Pressure in bar, and whether Remeha considers it OK |
 | `outdoorTemperatureInformation` | `applianceOutdoorTemperature` from the appliance's sensor, `cloudOutdoorTemperature` from a weather service |
 | `holidaySchedule` | `startTime`, `endTime` (local times, year 1 when not set) and `active`, see [holiday mode](#holiday-mode) |
