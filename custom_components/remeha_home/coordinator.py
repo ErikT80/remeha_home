@@ -9,7 +9,9 @@ import logging
 import asyncio
 from aiohttp.client_exceptions import ClientResponseError
 
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.exceptions import ConfigEntryAuthFailed
@@ -65,11 +67,14 @@ def get_producer_id(appliance_id: str, producer: dict) -> str:
 class RemehaHomeUpdateCoordinator(DataUpdateCoordinator):
     """Remeha Home update coordinator."""
 
-    def __init__(self, hass: HomeAssistant, api: RemehaHomeAPI) -> None:
+    def __init__(
+        self, hass: HomeAssistant, api: RemehaHomeAPI, config_entry: ConfigEntry
+    ) -> None:
         """Initialize Remeha Home update coordinator."""
         super().__init__(
             hass,
             _LOGGER,
+            config_entry=config_entry,
             name=DOMAIN,
             update_interval=timedelta(seconds=60),
         )
@@ -198,6 +203,16 @@ class RemehaHomeUpdateCoordinator(DataUpdateCoordinator):
                 manufacturer="Remeha",
                 model=self.technical_info[appliance_id]["applianceName"],
             )
+            # Register the appliance first: its zones and producers are linked to
+            # it by its device id
+            appliance_device_id = (
+                dr.async_get(self.hass)
+                .async_get_or_create(
+                    config_entry_id=self.config_entry.entry_id,
+                    **self.device_info[appliance_id],
+                )
+                .id
+            )
 
             for climate_zone in appliance["climateZones"]:
                 climate_zone_id = climate_zone["climateZoneId"]
@@ -256,7 +271,7 @@ class RemehaHomeUpdateCoordinator(DataUpdateCoordinator):
                     model=gateway_info["name"],
                     hw_version=gateway_info["hardwareVersion"],
                     sw_version=gateway_info["softwareVersion"],
-                    via_device=(DOMAIN, appliance_id),
+                    via_device_id=appliance_device_id,
                 )
 
             for hot_water_zone in appliance["hotWaterZones"]:
@@ -271,11 +286,13 @@ class RemehaHomeUpdateCoordinator(DataUpdateCoordinator):
                     name=hot_water_zone["name"],
                     manufacturer="Remeha",
                     model="Hot Water Zone",
-                    via_device=(DOMAIN, appliance_id),
+                    via_device_id=appliance_device_id,
                 )
 
             self._update_producers(
-                appliance_id, get_producers(appliance["consumptionData"])
+                appliance_id,
+                appliance_device_id,
+                get_producers(appliance["consumptionData"]),
             )
         return data
 
@@ -325,7 +342,9 @@ class RemehaHomeUpdateCoordinator(DataUpdateCoordinator):
         """Request the heating curve of a climate zone again on the next update."""
         self.heating_curve_last_update.pop(climate_zone_id, None)
 
-    def _update_producers(self, appliance_id: str, producers: list[dict]) -> None:
+    def _update_producers(
+        self, appliance_id: str, appliance_device_id: str, producers: list[dict]
+    ) -> None:
         """Register the producers (heat sources) of an appliance as devices."""
         type_counts = Counter(producer.get("producerType") for producer in producers)
         current_ids = set()
@@ -347,7 +366,7 @@ class RemehaHomeUpdateCoordinator(DataUpdateCoordinator):
                 name=name,
                 manufacturer="Remeha",
                 model=producer_label,
-                via_device=(DOMAIN, appliance_id),
+                via_device_id=appliance_device_id,
             )
 
         # Right after midnight the API doesn't list the producers until the data
