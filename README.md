@@ -173,3 +173,6 @@ python3 -m pytest
 
 ## API documentation
 For information on the Remeha Home API see [API documentation](documentation/api.md).
+
+## Contributing
+Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for how the integration works, how to set up a development environment, and what a pull request needs.
