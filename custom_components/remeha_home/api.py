@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import base64
-import datetime
+from datetime import date, datetime, timedelta
 import hashlib
 import json
 import logging
@@ -93,7 +93,7 @@ class RemehaHomeAPI:
     async def async_get_dashboard(self) -> dict:
         """Return the Remeha Home dashboard JSON."""
         # Add a timestamp to the request to prevent caching
-        timestamp = int(datetime.datetime.now().timestamp())
+        timestamp = int(datetime.now().timestamp())
         response = await self._async_api_request(
             "GET", f"/homes/dashboard?t={timestamp}"
         )
@@ -221,7 +221,7 @@ class RemehaHomeAPI:
             )
 
     async def async_set_holiday_schedule(
-        self, appliance_id: str, start_date: datetime.date, end_date: datetime.date
+        self, appliance_id: str, start_date: date, end_date: date
     ) -> None:
         """Schedule holiday mode for an appliance from start_date to end_date."""
         await self._async_post_holiday_schedule(
@@ -251,10 +251,10 @@ class RemehaHomeAPI:
 
     async def async_get_consumption_data_for_today(self, appliance_id: str) -> dict:
         """Get technical information for an appliance."""
-        today = datetime.datetime.now().replace(
+        today = datetime.now().replace(
             hour=0, minute=0, second=0, microsecond=0
         )
-        end_of_today = today + datetime.timedelta(hours=23, minutes=59, seconds=59)
+        end_of_today = today + timedelta(hours=23, minutes=59, seconds=59)
 
         today_string = today.strftime("%Y-%m-%d %H:%M:%S.%fZ")
         end_of_today_string = end_of_today.strftime("%Y-%m-%d %H:%M:%S.%fZ")
