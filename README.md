@@ -3,7 +3,7 @@ This integration lets you control your Remeha Home thermostats from Home Assista
 
 This is a fork of [msvisser/remeha_home](https://github.com/msvisser/remeha_home), which is no longer actively maintained.
 It adds hot water control, heat pump and cooling support, energy data per heat source, holiday mode and more, collected from community pull requests and tested on a live system.
-Please report problems in the [issues of this repository](https://github.com/hugo-leij/remeha_home/issues).
+Please report problems in the [issues of this repository](https://github.com/hugo-leij/remeha_home/issues), and attach the [diagnostics](#diagnostics) if you can.
 
 **Before using this integration, make sure you have set up your thermostat in the [Remeha Home](https://play.google.com/store/apps/details?id=com.bdrthermea.application.remeha) app.**
 If you are unable to use the Remeha Home app for your thermostat, this integration will not work.
@@ -146,6 +146,19 @@ sequence:
 Add both scripts to a dashboard, for example with an Entities card.
 Click the name of Set holiday mode (not its Run button) to open a dialog where you pick the dates and run the script.
 Cancel holiday mode only needs its Run button.
+
+## Diagnostics
+The diagnostics show the data that the integration holds, which helps to find the cause of a problem.
+To download them, go to **Settings → Devices & services → Remeha Home**, open the menu (⋮) of the entry and choose **Download diagnostics**.
+
+The file contains the dashboard as the integration holds it, the technical details of each appliance and the activities of each climate zone.
+The technical details, the activities and the heating curves are the responses of the API, as in the [API documentation](documentation/api.md).
+The dashboard is the API response with three additions:
+- The energy consumption of today of each appliance (`consumptionData`), as the sensors use it: the heating and hot water of a gas boiler in m³ (its total stays in kWh), and `null` values of a heat source replaced by 0.
+- The heating curve of each climate zone (`heatingCurve`).
+- The current activity of each hot water zone (`dhwCurrentActivity`).
+
+Your email address, the login token, the names of your home, zones and activities, and the serial numbers of the hardware are replaced by `**REDACTED**`, so you can attach the file to an issue.
 
 ## Tests
 The tests use the Home Assistant test tools for custom integrations, with anonymized responses of the Remeha API in `tests/fixtures`.
