@@ -19,6 +19,19 @@ from homeassistant.const import (
 
 DOMAIN = "remeha_home"
 
+# The clock programs, the presets of the climate entity
+PRESET_INDEX_TO_PRESET_MODE = {
+    1: "clock_program_1",
+    2: "clock_program_2",
+    3: "clock_program_3",
+}
+
+PRESET_MODE_TO_PRESET_INDEX = {
+    "clock_program_1": 1,
+    "clock_program_2": 2,
+    "clock_program_3": 3,
+}
+
 APPLIANCE_SENSOR_TYPES = [
     SensorEntityDescription(
         key="waterPressure",
@@ -30,6 +43,11 @@ APPLIANCE_SENSOR_TYPES = [
     SensorEntityDescription(
         key="activeThermalMode",
         name="Thermal Mode",
+    ),
+    SensorEntityDescription(
+        # What the appliance is set to do, the thermal mode is what it is doing now
+        key="operatingMode",
+        name="Operating Mode",
     ),
     SensorEntityDescription(
         key="errorStatus",
@@ -237,6 +255,20 @@ HOT_WATER_ZONE_SENSOR_TYPES = [
         name="Next Setpoint Time",
         device_class=SensorDeviceClass.TIMESTAMP,
     ),
+    SensorEntityDescription(
+        # The next activity of the clock program (Comfort or Eco), also reported when
+        # the zone doesn't follow the clock program
+        key="nextSwitchActivity",
+        name="Next Mode",
+    ),
+    SensorEntityDescription(
+        # The active clock program, with the names of the presets of the climate entity
+        key="activeDwhTimeProgramNumber",
+        translation_key="clock_program",
+        device_class=SensorDeviceClass.ENUM,
+        options=list(PRESET_INDEX_TO_PRESET_MODE.values()),
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
 ]
 
 APPLIANCE_BINARY_SENSOR_TYPES = [
@@ -290,5 +322,18 @@ HOT_WATER_ZONE_BINARY_SENSOR_TYPES = [
             device_class=BinarySensorDeviceClass.HEAT,
         ),
         lambda value: value == "ProducingHeat",
+    ),
+]
+
+# Only for appliances that support hot water optimization (capabilityDhwOptimization):
+# the zone also reports the setting when the appliance doesn't support it
+HOT_WATER_ZONE_OPTIMIZATION_BINARY_SENSOR_TYPES = [
+    (
+        BinarySensorEntityDescription(
+            key="optimizationEnabled",
+            name="Optimization",
+            entity_category=EntityCategory.DIAGNOSTIC,
+        ),
+        lambda value: bool(value),
     ),
 ]

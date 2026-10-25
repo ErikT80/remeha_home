@@ -21,7 +21,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 import homeassistant.util.dt as dt_util
 
 from .api import RemehaHomeAPI
-from .const import DOMAIN
+from .const import DOMAIN, PRESET_INDEX_TO_PRESET_MODE, PRESET_MODE_TO_PRESET_INDEX
 from .coordinator import RemehaHomeUpdateCoordinator
 from .util import remeha_utc_time
 
@@ -68,18 +68,6 @@ REMEHA_STATUS_TO_HVAC_ACTION = {
     "ProducingCold": HVACAction.COOLING,
     "RequestingCold": HVACAction.COOLING,
     "Idle": HVACAction.IDLE,
-}
-
-PRESET_INDEX_TO_PRESET_MODE = {
-    1: "clock_program_1",
-    2: "clock_program_2",
-    3: "clock_program_3",
-}
-
-PRESET_MODE_TO_PRESET_INDEX = {
-    "clock_program_1": 1,
-    "clock_program_2": 2,
-    "clock_program_3": 3,
 }
 
 

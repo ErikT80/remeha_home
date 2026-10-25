@@ -29,6 +29,7 @@ from .const import (
     APPLIANCE_BINARY_SENSOR_TYPES,
     CLIMATE_ZONE_BINARY_SENSOR_TYPES,
     HOT_WATER_ZONE_BINARY_SENSOR_TYPES,
+    HOT_WATER_ZONE_OPTIMIZATION_BINARY_SENSOR_TYPES,
 )
 from .coordinator import RemehaHomeUpdateCoordinator
 from .util import remeha_time
@@ -86,13 +87,19 @@ async def async_setup_entry(
                 )
             )
 
+        hot_water_zone_types = HOT_WATER_ZONE_BINARY_SENSOR_TYPES
+        if appliance.get("capabilityDhwOptimization"):
+            hot_water_zone_types = (
+                hot_water_zone_types + HOT_WATER_ZONE_OPTIMIZATION_BINARY_SENSOR_TYPES
+            )
+
         for hot_water_zone in appliance["hotWaterZones"]:
             entities.extend(
                 _binary_sensors(
                     coordinator,
                     hot_water_zone,
                     hot_water_zone["hotWaterZoneId"],
-                    HOT_WATER_ZONE_BINARY_SENSOR_TYPES,
+                    hot_water_zone_types,
                 )
             )
 

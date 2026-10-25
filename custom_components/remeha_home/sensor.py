@@ -23,7 +23,8 @@ from .const import (
     HEATING_CURVE_SENSOR_TYPES,
     HOT_WATER_ZONE_SENSOR_TYPES,
     GAS_PRODUCER_SENSOR_TYPES,
-    ELECTRIC_PRODUCER_SENSOR_TYPES
+    ELECTRIC_PRODUCER_SENSOR_TYPES,
+    PRESET_INDEX_TO_PRESET_MODE,
 )
 from .coordinator import (
     PRODUCER_STATS,
@@ -37,6 +38,18 @@ _LOGGER = logging.getLogger(__name__)
 
 # Times that the API sends in UTC, the other times are local times
 UTC_TIME_KEYS = {"temporaryOverride.endTime"}
+
+# Values that the API names differently from the other entities
+VALUE_FUNCTIONS = {
+    # The API calls Eco "Reduced", after its setpoint. The Mode sensor and the
+    # Remeha Home app call it Eco.
+    "nextSwitchActivity": lambda value: "Eco" if value == "Reduced" else value,
+    # The clock program number, named like the presets of the climate entity. Another
+    # value stays as sent, so that it is logged as unexpected.
+    "activeDwhTimeProgramNumber": lambda value: PRESET_INDEX_TO_PRESET_MODE.get(
+        value, value
+    ),
+}
 
 # Totals per energy type on the appliance, replaced by the sensors of the producer devices
 REMOVED_APPLIANCE_SENSOR_KEYS = [
@@ -185,6 +198,20 @@ class RemehaHomeSensor(CoordinatorEntity, SensorEntity):
             if self.entity_description.key in UTC_TIME_KEYS:
                 return remeha_utc_time(value)
             return remeha_time(value)
+
+        if value is None:
+            return None
+
+        if value_function := VALUE_FUNCTIONS.get(self.entity_description.key):
+            value = value_function(value)
+
+        options = self.entity_description.options
+        if options is not None and value not in options:
+            # An enum sensor fails on a value outside its options, so show it as unknown
+            _LOGGER.debug(
+                "Unexpected value for %s: %s", self.entity_description.key, value
+            )
+            return None
 
         return value
 

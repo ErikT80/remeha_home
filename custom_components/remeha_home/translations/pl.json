@@ -61,6 +61,14 @@
         "sensor": {
             "heating_curve_max_flow_temperature": {
                 "name": "Maksymalna temperatura zasilania krzywej grzewczej"
+            },
+            "clock_program": {
+                "name": "Program czasowy",
+                "state": {
+                    "clock_program_1": "Harmonogram 1",
+                    "clock_program_2": "Harmonogram 2",
+                    "clock_program_3": "Harmonogram 3"
+                }
             }
         }
     },

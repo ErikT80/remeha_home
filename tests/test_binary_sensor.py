@@ -61,6 +61,69 @@ async def test_pre_heat(
     assert state(hass, CLIMATE_ZONE_ID, "preHeat.active") == STATE_ON
 
 
+async def test_optimization(
+    hass: HomeAssistant, config_entry, mock_api, appliance, hot_water_zone
+) -> None:
+    """The Optimization sensor shows whether hot water optimization is enabled."""
+    appliance["capabilityDhwOptimization"] = True
+    await setup_integration(hass, config_entry, mock_api)
+    assert state(hass, HOT_WATER_ZONE_ID, "optimizationEnabled") == STATE_OFF
+    entry = er.async_get(hass).async_get(
+        entity_id(hass, "binary_sensor", HOT_WATER_ZONE_ID, "optimizationEnabled")
+    )
+    assert entry.entity_category is EntityCategory.DIAGNOSTIC
+    assert entry.original_name == "Optimization"
+
+    hot_water_zone["optimizationEnabled"] = True
+    await refresh(hass, config_entry)
+    assert state(hass, HOT_WATER_ZONE_ID, "optimizationEnabled") == STATE_ON
+
+    hot_water_zone["optimizationEnabled"] = None
+    await refresh(hass, config_entry)
+    assert state(hass, HOT_WATER_ZONE_ID, "optimizationEnabled") == STATE_UNKNOWN
+
+    del hot_water_zone["optimizationEnabled"]
+    await refresh(hass, config_entry)
+    assert state(hass, HOT_WATER_ZONE_ID, "optimizationEnabled") == STATE_UNKNOWN
+
+
+async def test_optimization_not_reported(
+    hass: HomeAssistant, config_entry, mock_api, appliance, hot_water_zone
+) -> None:
+    """No Optimization sensor for a hot water zone that doesn't report it."""
+    appliance["capabilityDhwOptimization"] = True
+    del hot_water_zone["optimizationEnabled"]
+    await setup_integration(hass, config_entry, mock_api)
+
+    assert (
+        entity_id(hass, "binary_sensor", HOT_WATER_ZONE_ID, "optimizationEnabled")
+        is None
+    )
+    assert entity_id(hass, "binary_sensor", HOT_WATER_ZONE_ID, "dhwStatus")
+
+
+@pytest.mark.parametrize("capability", [False, "missing"])
+async def test_optimization_not_supported(
+    hass: HomeAssistant, config_entry, mock_api, appliance, capability
+) -> None:
+    """No Optimization sensor when the appliance doesn't support it.
+
+    The zone of the fixture reports optimizationEnabled, but its appliance reports
+    capabilityDhwOptimization false.
+    """
+    if capability == "missing":
+        del appliance["capabilityDhwOptimization"]
+    else:
+        appliance["capabilityDhwOptimization"] = capability
+    await setup_integration(hass, config_entry, mock_api)
+
+    assert (
+        entity_id(hass, "binary_sensor", HOT_WATER_ZONE_ID, "optimizationEnabled")
+        is None
+    )
+    assert entity_id(hass, "binary_sensor", HOT_WATER_ZONE_ID, "dhwStatus")
+
+
 async def test_not_reported(
     hass: HomeAssistant, config_entry, mock_api, appliance, climate_zone
 ) -> None:

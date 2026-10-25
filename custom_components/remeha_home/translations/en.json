@@ -61,6 +61,14 @@
         "sensor": {
             "heating_curve_max_flow_temperature": {
                 "name": "Heating curve maximum flow temperature"
+            },
+            "clock_program": {
+                "name": "Clock program",
+                "state": {
+                    "clock_program_1": "Schedule 1",
+                    "clock_program_2": "Schedule 2",
+                    "clock_program_3": "Schedule 3"
+                }
             }
         }
     },
