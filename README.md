@@ -60,6 +60,7 @@ You can simply log in using the credentials that you would use in the respective
     On hybrid setups where the existing gas boiler heats the hot water, such as the Remeha Elga Ace, Remeha does not report the gas used for hot water, so that sensor stays at 0.
 
 ## Installation
+This integration needs Home Assistant 2026.10 or newer.
 
 ### Install with HACS (recommended)
 This fork is not in the default list of [HACS](https://hacs.xyz/), so you add it as a custom repository.
