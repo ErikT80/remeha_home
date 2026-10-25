@@ -8,10 +8,14 @@
         },
         "step": {
             "auth": {
+                "description": "Configurez l'intégration Remeha Home avec les identifiants de votre compte Remeha Home.",
                 "data": {
-                    "email": "Addresse e-mail",
+                    "email": "Adresse e-mail",
                     "password": "Mot de passe"
                 }
+            },
+            "reauth_confirm": {
+                "description": "Impossible d'actualiser le jeton d'accès Remeha Home. Reconnectez-vous avec vos identifiants Remeha Home pour continuer à utiliser cette intégration."
             }
         }
     },

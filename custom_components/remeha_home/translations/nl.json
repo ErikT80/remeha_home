@@ -8,10 +8,14 @@
         },
         "step": {
             "auth": {
+                "description": "Stel de Remeha Home-integratie in met de inloggegevens van je Remeha Home-account.",
                 "data": {
                     "email": "E-mailadres",
                     "password": "Wachtwoord"
                 }
+            },
+            "reauth_confirm": {
+                "description": "Het toegangstoken van Remeha Home kon niet worden vernieuwd. Log opnieuw in met je Remeha Home-gegevens om deze integratie te blijven gebruiken."
             }
         }
     },
