@@ -19,6 +19,7 @@ The [API documentation](documentation/api.md) describes the calls and responses.
 | `climate.py`, `water_heater.py`, `sensor.py`, `binary_sensor.py`, `switch.py`, `number.py` | The entities of each platform |
 | `const.py` | The descriptions of the sensors and binary sensors |
 | `util.py` | Helpers, such as reading the times of the API |
+| `holiday.py` | Sets the zones back to their modes after a holiday |
 | `diagnostics.py` | The diagnostics download, with personal data redacted |
 | `services.yaml` | The holiday mode actions |
 | `translations/` | Names and messages in English, French, Dutch and Polish |
