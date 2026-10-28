@@ -380,7 +380,7 @@ Returns the name of the appliance and its gateways.
 POST /appliances/{appliance_id}/holidayschedule
 ```
 
-Schedules holiday mode, in which the appliance lowers heating and hot water to its holiday setpoints.
+Schedules holiday mode. While it is active, the appliance sets every climate zone to `FrostProtection` (setpoint 6 °C) and the hot water to `Off`.
 The dashboard reports the result in `holidaySchedule` a few seconds later.
 
 ```json
@@ -391,7 +391,7 @@ The dashboard reports the result in `holidaySchedule` a few seconds later.
 ```
 
 - Remeha keeps whole days only: a start of `2026-11-20T08:00:00Z` is stored as `2026-11-20T00:00:01Z`.
-- The end is the day you come back: from midnight on that day, the appliance heats normally again.
+- The end is the day you come back. The holiday ends at midnight UTC: a holiday until 27 October ended at about 01:00 CET. The dashboard then reports `0001-01-01T00:00:01Z` for both times, like after a cancellation.
 - The start must be before the end, otherwise the API returns 400 "Start Date must be before the End Date.".
 - The dashboard shows the new dates right away, but `active` only changes a few seconds later, once the appliance itself has switched.
 
@@ -403,6 +403,15 @@ To cancel an active or scheduled holiday, post the empty period. The dashboard t
 }
 ```
 There is no `PUT` or `DELETE` on this path (404).
+
+When the holiday is over, the appliance restores the modes, but not always right away. Measured on a Remeha Elga Ace with one climate zone:
+- after a cancellation, a zone in `Manual` came back with its setpoint within 15 seconds;
+- after a cancellation, a zone in `Scheduling` came back within 30 seconds once, and was still in `FrostProtection` after 3.5 minutes another time;
+- when the holiday ended by itself, a zone in `Scheduling` came back after about 3.5 minutes;
+- the hot water came back to `Scheduling` right away.
+
+On a BAXI heat pump, a zone was reported to show `Scheduling` again but keep the 6 °C setpoint until [`modes/schedule`](#climate-zones) was sent again, and the hot water to stay `Off`.
+The integration saves the modes when a holiday starts, and sets them again when it is over.
 
 ## Climate zones
 

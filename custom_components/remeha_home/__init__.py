@@ -7,11 +7,13 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import config_entry_oauth2_flow
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.storage import Store
 
 from .api import RemehaHomeOAuth2Implementation, RemehaHomeAPI
 from .config_flow import RemehaHomeLoginFlowHandler
 from .const import DOMAIN
 from .coordinator import RemehaHomeUpdateCoordinator
+from .holiday import STORAGE_VERSION, HolidayModeRestorer, storage_key
 
 PLATFORMS: list[Platform] = [
     Platform.BINARY_SENSOR,
@@ -46,8 +48,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     oauth_session = config_entry_oauth2_flow.OAuth2Session(hass, entry, implementation)
     api = RemehaHomeAPI(oauth_session)
     coordinator = RemehaHomeUpdateCoordinator(hass, api, entry)
+    holiday_restorer = HolidayModeRestorer(hass, entry, coordinator, api)
+    await holiday_restorer.async_load()
 
     await coordinator.async_config_entry_first_refresh()
+    entry.async_on_unload(coordinator.async_add_listener(holiday_restorer.async_update))
+    holiday_restorer.async_update()
 
     hass.data[DOMAIN][entry.entry_id] = {
         "api": api,
@@ -65,3 +71,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass.data[DOMAIN].pop(entry.entry_id)
 
     return unload_ok
+
+
+async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Remove the modes saved before a holiday."""
+    await Store(hass, STORAGE_VERSION, storage_key(entry)).async_remove()
