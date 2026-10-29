@@ -34,7 +34,7 @@ Two times are real UTC. This was measured on a live system and checked against t
 | Field | Format | Measured |
 |---|---|---|
 | `nextSwitchTime` (climate and hot water zones) | Local time | A schedule switch at 22:00 CEST is `22:00:00Z` |
-| `holidaySchedule.startTime` and `endTime` | Local time | Whole days, stored as `<date>T00:00:01Z` |
+| `holidaySchedule.startTime` and `endTime` | Date | Whole days, stored as `<date>T00:00:01Z`. A holiday until 27 October ended at 00:00 UTC (01:00 CET), see [holiday mode](#holiday-mode) |
 | `temporaryOverride.endTime` | **UTC** | An override until the schedule resumes at 22:00 CEST is `20:00:00Z` |
 | `boostModeEndTime` | **UTC** | A 30 minute boost started at 14:41:59 CEST ends at `13:11:59.2692621Z` |
 
@@ -81,7 +81,7 @@ The available fields differ per appliance. The most important ones:
 | `activeThermalMode` | e.g. `Idle`, `HeatingCH`, `HeatingDHW` or `Cooling`: what the appliance is doing now |
 | `waterPressure`, `waterPressureOK` | Pressure in bar, and whether Remeha considers it OK |
 | `outdoorTemperatureInformation` | `applianceOutdoorTemperature` from the appliance's sensor, `cloudOutdoorTemperature` from a weather service |
-| `holidaySchedule` | `startTime`, `endTime` (local times, year 1 when not set) and `active`, see [holiday mode](#holiday-mode) |
+| `holidaySchedule` | `startTime`, `endTime` (dates, year 1 when not set) and `active`, see [holiday mode](#holiday-mode) |
 | `gasCalorificValue` | kWh per m³ of gas, to convert the gas energy of the [energy consumption](#energy-consumption) to m³ |
 | **Climate zone** | |
 | `zoneMode` | `Scheduling`, `TemporaryOverride`, `Manual` or `FrostProtection` |
