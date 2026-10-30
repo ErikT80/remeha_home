@@ -7,6 +7,7 @@ from homeassistant.helpers import device_registry as dr
 
 from custom_components.remeha_home.const import DOMAIN
 from custom_components.remeha_home.coordinator import get_producer_id
+from custom_components.remeha_home.producer_ids import ProducerIdResolver
 
 from .conftest import (
     APPLIANCE_ID,
@@ -117,3 +118,64 @@ def test_colliding_ids_do_not_depend_on_api_producer_order() -> None:
     for producers in ([heat_pump, boiler], [boiler, heat_pump]):
         assert get_producer_id(APPLIANCE_ID, heat_pump, producers) == f"{APPLIANCE_ID}_1"
         assert get_producer_id(APPLIANCE_ID, boiler, producers) == f"{APPLIANCE_ID}_1_GasBoiler"
+
+
+def test_persistent_producer_ids_survive_missing_producers_and_restart() -> None:
+    """Once assigned, producer IDs do not depend on later incomplete API data."""
+    heat_pump = {
+        "producerType": "HeatPumpAirSource",
+        "energyType": "Electric",
+        "instanceWithinDevice": 1,
+    }
+    boiler = {
+        "producerType": "GasBoiler",
+        "energyType": "NaturalGas",
+        "instanceWithinDevice": 1,
+    }
+    resolver = ProducerIdResolver()
+    first, changed = resolver.resolve(APPLIANCE_ID, [heat_pump, boiler])
+    assert changed
+    assert dict((item["producerType"], uid) for item, uid in first) == {
+        "HeatPumpAirSource": f"{APPLIANCE_ID}_1",
+        "GasBoiler": f"{APPLIANCE_ID}_1_GasBoiler",
+    }
+    previous = resolver.get_id(APPLIANCE_ID, boiler)
+    only_boiler, changed = resolver.resolve(APPLIANCE_ID, [boiler])
+    assert not changed
+    assert only_boiler[0][1] == previous
+
+    restored = ProducerIdResolver(resolver.assignments)
+    assert restored.resolve(APPLIANCE_ID, [boiler])[0][0][1] == previous
+    assert restored.resolve(APPLIANCE_ID, [boiler, heat_pump])[0][0][1] == f"{APPLIANCE_ID}_1_GasBoiler"
+
+
+def test_standalone_and_incomplete_initial_discovery_preserve_ids() -> None:
+    """A standalone device retains its legacy ID; later producers get new IDs."""
+    heat_pump = {
+        "producerType": "HeatPumpAirSource",
+        "energyType": "Electric",
+        "instanceWithinDevice": 1,
+    }
+    boiler = {
+        "producerType": "GasBoiler",
+        "energyType": "NaturalGas",
+        "instanceWithinDevice": 1,
+    }
+    resolver = ProducerIdResolver()
+    assert resolver.resolve(APPLIANCE_ID, [boiler])[0][0][1] == f"{APPLIANCE_ID}_1"
+    assert resolver.resolve(APPLIANCE_ID, [heat_pump, boiler])[0][0][1] == f"{APPLIANCE_ID}_1"
+    assert resolver.get_id(APPLIANCE_ID, boiler) == f"{APPLIANCE_ID}_1"
+    assert resolver.get_id(APPLIANCE_ID, heat_pump) == f"{APPLIANCE_ID}_1_HeatPumpAirSource"
+
+
+def test_ambiguous_same_type_duplicate_producers_are_not_merged() -> None:
+    """Skip indistinguishable API producers rather than mix their meter values."""
+    heat_pump = {
+        "producerType": "HeatPumpAirSource",
+        "energyType": "Electric",
+        "instanceWithinDevice": 1,
+    }
+    resolver = ProducerIdResolver()
+    allocated, changed = resolver.resolve(APPLIANCE_ID, [heat_pump, dict(heat_pump)])
+    assert allocated == []
+    assert not changed
