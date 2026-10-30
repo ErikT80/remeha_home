@@ -60,54 +60,6 @@ def get_producers(consumption: dict) -> list[dict]:
     return (producer_stats or {}).get("producers") or []
 
 
-def get_producer_id(
-    appliance_id: str, producer: dict, producers: list[dict] | None = None
-) -> str:
-    """Keep legacy producer IDs unless the API reports a duplicate instance.
-
-    Some hybrids report instanceWithinDevice=1 for both a heat pump and a gas
-    boiler. Retain the old ID for the electric producer and add a type suffix
-    for the other producer. On non-colliding systems all IDs stay unchanged.
-    """
-    instance = producer["instanceWithinDevice"]
-    legacy_id = f"{appliance_id}_{instance}"
-    same_instance = [
-        item for item in (producers or [producer])
-        if item["instanceWithinDevice"] == instance
-    ]
-    if len(same_instance) == 1:
-        return legacy_id
-
-    # Prefer the electric producer for the legacy ID. That is the entity
-    # registered first on affected Elga Ace hybrids with a colliding instance.
-    primary = min(
-        same_instance,
-        key=lambda item: (
-            item.get("energyType") != "Electric",
-            item.get("producerType") or "",
-            str(item.get("deviceIndex") or ""),
-        ),
-    )
-    if producer is primary:
-        return legacy_id
-
-    producer_type = producer.get("producerType") or "Unknown"
-    same_type = [
-        item for item in same_instance
-        if (item.get("producerType") or "Unknown") == producer_type
-    ]
-    if len(same_type) == 1:
-        return f"{legacy_id}_{producer_type}"
-
-    # If two same-type producers also reuse the instance, use a position to
-    # prevent collisions. Their API identifiers are not necessarily unique.
-    type_index = next(
-        index for index, item in enumerate(same_type, start=1)
-        if item is producer
-    )
-    return f"{legacy_id}_{producer_type}_{type_index}"
-
-
 class RemehaHomeUpdateCoordinator(DataUpdateCoordinator):
     """Remeha Home update coordinator."""
 
