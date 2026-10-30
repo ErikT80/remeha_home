@@ -34,7 +34,7 @@ class ProducerIdResolver:
         return self.assignments.get(self._identity(appliance_id, producer))
 
     def resolve(
-        self, appliance_id: str, producers: list[dict]
+        self, appliance_id: str, producers: list[dict], *, appliance_type: str | None = None
     ) -> tuple[list[tuple[dict, str]], bool]:
         """Register new producers, preserving IDs already assigned to others.
 
@@ -70,7 +70,14 @@ class ProducerIdResolver:
             producer_id = self.assignments.get(identity)
             if producer_id is None:
                 legacy = f"{appliance_id}_{producer['instanceWithinDevice']}"
-                if legacy not in used:
+                # A heat-pump appliance may initially report only its boiler.
+                # Reserve the legacy instance ID for the electric heat pump,
+                # whose existing entity may already use it.
+                reserve_for_heat_pump = (
+                    appliance_type == "HeatPump"
+                    and producer.get("energyType") == "NaturalGas"
+                )
+                if legacy not in used and not reserve_for_heat_pump:
                     producer_id = legacy
                 else:
                     producer_type = producer.get("producerType") or "Unknown"
