@@ -182,3 +182,25 @@ def test_ambiguous_same_type_duplicate_producers_are_not_merged() -> None:
     allocated, changed = resolver.resolve(APPLIANCE_ID, [heat_pump, dict(heat_pump)])
     assert allocated == []
     assert not changed
+
+
+def test_hybrid_first_reports_only_boiler() -> None:
+    """On a heat-pump appliance, the boiler must not take the heat pump ID."""
+    boiler = {
+        "producerType": "GasBoiler",
+        "energyType": "NaturalGas",
+        "instanceWithinDevice": 1,
+    }
+    pump = {
+        "producerType": "HeatPumpAirSource",
+        "energyType": "Electric",
+        "instanceWithinDevice": 1,
+    }
+    resolver = ProducerIdResolver()
+    assert resolver.resolve(
+        APPLIANCE_ID, [boiler], appliance_type="HeatPump"
+    )[0][0][1] == f"{APPLIANCE_ID}_1_GasBoiler"
+    restored = ProducerIdResolver(resolver.assignments)
+    restored.resolve(APPLIANCE_ID, [pump, boiler], appliance_type="HeatPump")
+    assert restored.get_id(APPLIANCE_ID, boiler) == f"{APPLIANCE_ID}_1_GasBoiler"
+    assert restored.get_id(APPLIANCE_ID, pump) == f"{APPLIANCE_ID}_1"
