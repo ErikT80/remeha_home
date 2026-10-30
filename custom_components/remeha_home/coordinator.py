@@ -344,7 +344,11 @@ class RemehaHomeUpdateCoordinator(DataUpdateCoordinator):
         self, appliance_id: str, appliance_device_id: str, producers: list[dict]
     ) -> None:
         """Register the producers (heat sources) of an appliance as devices."""
-        resolved, changed = self.producer_id_resolver.resolve(appliance_id, producers)
+        resolved, changed = self.producer_id_resolver.resolve(
+            appliance_id,
+            producers,
+            appliance_type=self.items[appliance_id].get("applianceType"),
+        )
         type_counts = Counter(producer.get("producerType") for producer in producers)
         current_ids = set()
 
