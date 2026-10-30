@@ -6,7 +6,6 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
 
 from custom_components.remeha_home.const import DOMAIN
-from custom_components.remeha_home.coordinator import get_producer_id
 from custom_components.remeha_home.producer_ids import ProducerIdResolver
 
 from .conftest import (
@@ -56,8 +55,9 @@ async def test_hybrid_producers_with_same_instance_keep_separate_devices_and_ene
 
     await setup_integration(hass, config_entry, mock_api)
 
-    heat_pump_id = get_producer_id(APPLIANCE_ID, heat_pump, [heat_pump, boiler])
-    boiler_id = get_producer_id(APPLIANCE_ID, boiler, [heat_pump, boiler])
+    resolver = hass.data[DOMAIN][config_entry.entry_id]["coordinator"].producer_id_resolver
+    heat_pump_id = resolver.get_id(APPLIANCE_ID, heat_pump)
+    boiler_id = resolver.get_id(APPLIANCE_ID, boiler)
     assert heat_pump_id != boiler_id
 
     coordinator = hass.data[DOMAIN][config_entry.entry_id]["coordinator"]
@@ -97,10 +97,11 @@ def test_producer_ids_remain_unchanged_without_collisions() -> None:
         "energyType": "NaturalGas",
         "instanceWithinDevice": 2,
     }
-    assert get_producer_id(APPLIANCE_ID, heat_pump, [heat_pump]) == f"{APPLIANCE_ID}_1"
-    assert get_producer_id(APPLIANCE_ID, boiler, [boiler]) == f"{APPLIANCE_ID}_2"
-    assert get_producer_id(APPLIANCE_ID, heat_pump, [heat_pump, boiler]) == f"{APPLIANCE_ID}_1"
-    assert get_producer_id(APPLIANCE_ID, boiler, [heat_pump, boiler]) == f"{APPLIANCE_ID}_2"
+    resolver = ProducerIdResolver()
+    assert resolver.resolve(APPLIANCE_ID, [heat_pump])[0][0][1] == f"{APPLIANCE_ID}_1"
+    assert resolver.resolve(APPLIANCE_ID, [boiler])[0][0][1] == f"{APPLIANCE_ID}_2"
+    assert resolver.resolve(APPLIANCE_ID, [heat_pump, boiler])[0][0][1] == f"{APPLIANCE_ID}_1"
+    assert resolver.get_id(APPLIANCE_ID, boiler) == f"{APPLIANCE_ID}_2"
 
 
 def test_colliding_ids_do_not_depend_on_api_producer_order() -> None:
@@ -116,8 +117,10 @@ def test_colliding_ids_do_not_depend_on_api_producer_order() -> None:
         "instanceWithinDevice": 1,
     }
     for producers in ([heat_pump, boiler], [boiler, heat_pump]):
-        assert get_producer_id(APPLIANCE_ID, heat_pump, producers) == f"{APPLIANCE_ID}_1"
-        assert get_producer_id(APPLIANCE_ID, boiler, producers) == f"{APPLIANCE_ID}_1_GasBoiler"
+        resolver = ProducerIdResolver()
+        resolver.resolve(APPLIANCE_ID, producers)
+        assert resolver.get_id(APPLIANCE_ID, heat_pump) == f"{APPLIANCE_ID}_1"
+        assert resolver.get_id(APPLIANCE_ID, boiler) == f"{APPLIANCE_ID}_1_GasBoiler"
 
 
 def test_persistent_producer_ids_survive_missing_producers_and_restart() -> None:
