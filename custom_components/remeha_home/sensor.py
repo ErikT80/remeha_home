@@ -119,8 +119,9 @@ async def async_setup_entry(
         """
         new_entities = []
         for appliance in coordinator.data["appliances"]:
-            for producer in get_producers(appliance["consumptionData"]):
-                producer_id = get_producer_id(appliance["applianceId"], producer)
+            producers = get_producers(appliance["consumptionData"])
+            for producer in producers:
+                producer_id = get_producer_id(appliance["applianceId"], producer, producers)
                 if producer_id in known_producer_ids:
                     continue
                 known_producer_ids.add(producer_id)
