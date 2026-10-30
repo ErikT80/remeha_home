@@ -29,7 +29,6 @@ from .const import (
 from .coordinator import (
     PRODUCER_STATS,
     RemehaHomeUpdateCoordinator,
-    get_producer_id,
     get_producers,
 )
 from .util import remeha_time, remeha_utc_time, reports_dhw_temperature
@@ -121,7 +120,11 @@ async def async_setup_entry(
         for appliance in coordinator.data["appliances"]:
             producers = get_producers(appliance["consumptionData"])
             for producer in producers:
-                producer_id = get_producer_id(appliance["applianceId"], producer, producers)
+                producer_id = coordinator.producer_id_resolver.get_id(
+                    appliance["applianceId"], producer
+                )
+                if producer_id is None:
+                    continue
                 if producer_id in known_producer_ids:
                     continue
                 known_producer_ids.add(producer_id)
