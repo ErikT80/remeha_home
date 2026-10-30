@@ -138,7 +138,7 @@ def test_persistent_producer_ids_survive_missing_producers_and_restart() -> None
     resolver = ProducerIdResolver()
     first, changed = resolver.resolve(APPLIANCE_ID, [heat_pump, boiler])
     assert changed
-    assert dict((item["producerType"], uid) for item, uid in first) == {
+    assert {item["producerType"]: uid for item, uid in first} == {
         "HeatPumpAirSource": f"{APPLIANCE_ID}_1",
         "GasBoiler": f"{APPLIANCE_ID}_1_GasBoiler",
     }
@@ -149,7 +149,9 @@ def test_persistent_producer_ids_survive_missing_producers_and_restart() -> None
 
     restored = ProducerIdResolver(resolver.assignments)
     assert restored.resolve(APPLIANCE_ID, [boiler])[0][0][1] == previous
-    assert restored.resolve(APPLIANCE_ID, [boiler, heat_pump])[0][0][1] == f"{APPLIANCE_ID}_1_GasBoiler"
+    restored.resolve(APPLIANCE_ID, [boiler, heat_pump])
+    assert restored.get_id(APPLIANCE_ID, boiler) == f"{APPLIANCE_ID}_1_GasBoiler"
+    assert restored.get_id(APPLIANCE_ID, heat_pump) == f"{APPLIANCE_ID}_1"
 
 
 def test_standalone_and_incomplete_initial_discovery_preserve_ids() -> None:
@@ -166,7 +168,7 @@ def test_standalone_and_incomplete_initial_discovery_preserve_ids() -> None:
     }
     resolver = ProducerIdResolver()
     assert resolver.resolve(APPLIANCE_ID, [boiler])[0][0][1] == f"{APPLIANCE_ID}_1"
-    assert resolver.resolve(APPLIANCE_ID, [heat_pump, boiler])[0][0][1] == f"{APPLIANCE_ID}_1"
+    resolver.resolve(APPLIANCE_ID, [heat_pump, boiler])
     assert resolver.get_id(APPLIANCE_ID, boiler) == f"{APPLIANCE_ID}_1"
     assert resolver.get_id(APPLIANCE_ID, heat_pump) == f"{APPLIANCE_ID}_1_HeatPumpAirSource"
 
