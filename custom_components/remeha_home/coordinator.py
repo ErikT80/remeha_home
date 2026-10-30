@@ -60,8 +60,13 @@ def get_producers(consumption: dict) -> list[dict]:
 
 
 def get_producer_id(appliance_id: str, producer: dict) -> str:
-    """Return the item id of a producer."""
-    return f"{appliance_id}_{producer['instanceWithinDevice']}"
+    """Identify a producer by type and instance, not instance alone.
+
+    Elga Ace hybrids can report instanceWithinDevice=1 for both the heat pump
+    and the gas boiler; using only that index makes their entities collide.
+    """
+    producer_type = producer.get("producerType") or "Unknown"
+    return f"{appliance_id}_{producer_type}_{producer['instanceWithinDevice']}"
 
 
 class RemehaHomeUpdateCoordinator(DataUpdateCoordinator):
