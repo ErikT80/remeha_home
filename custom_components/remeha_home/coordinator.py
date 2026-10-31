@@ -12,13 +12,14 @@ from aiohttp.client_exceptions import ClientResponseError
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.exceptions import ConfigEntryAuthFailed
 
 from .api import RemehaHomeAPI
 from .const import DOMAIN
-from .producer_ids import ProducerIdResolver
+from .producer_ids import ProducerIdResolver, is_valid_producer
 from .util import detect_dhw_setpoint_activity
 
 _LOGGER = logging.getLogger(__name__)
@@ -344,12 +345,29 @@ class RemehaHomeUpdateCoordinator(DataUpdateCoordinator):
         self, appliance_id: str, appliance_device_id: str, producers: list[dict]
     ) -> None:
         """Register the producers (heat sources) of an appliance as devices."""
+        # A hybrid may initially report only its boiler. If an electric entity
+        # already owns that instance's legacy ID, don't reassign it to gas.
+        existing_electric_legacy_ids = set()
+        if self.items[appliance_id].get("applianceType") == "HeatPump":
+            entity_registry = er.async_get(self.hass)
+            for producer in producers:
+                if not is_valid_producer(producer):
+                    continue
+                if producer.get("energyType") != "NaturalGas":
+                    continue
+                legacy = f"{appliance_id}_{producer['instanceWithinDevice']}"
+                if entity_registry.async_get_entity_id(
+                    "sensor", DOMAIN, f"{DOMAIN}_{legacy}_seasonalEfficiency"
+                ):
+                    existing_electric_legacy_ids.add(legacy)
+
         resolved, changed = self.producer_id_resolver.resolve(
             appliance_id,
             producers,
             appliance_type=self.items[appliance_id].get("applianceType"),
+            existing_electric_legacy_ids=existing_electric_legacy_ids,
         )
-        type_counts = Counter(producer.get("producerType") for producer in producers)
+        type_counts = Counter(producer.get("producerType") for producer, _ in resolved)
         current_ids = set()
 
         for producer, producer_id in resolved:

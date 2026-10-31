@@ -131,8 +131,11 @@ async def async_setup_entry(
 
                 if producer.get("energyType") == "NaturalGas":
                     entity_descriptions = GAS_PRODUCER_SENSOR_TYPES
-                else:
+                elif producer.get("energyType") == "Electric":
                     entity_descriptions = ELECTRIC_PRODUCER_SENSOR_TYPES
+                else:
+                    # Unsupported energy sources must not get electrical sensors.
+                    continue
                 new_entities.extend(
                     RemehaHomeSensor(coordinator, producer_id, entity_description)
                     for entity_description in entity_descriptions

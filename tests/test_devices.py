@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import logging
+
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import entity_registry as er
 
 from custom_components.remeha_home.const import DOMAIN
 from custom_components.remeha_home.producer_ids import ProducerIdResolver
@@ -13,6 +16,8 @@ from .conftest import (
     CLIMATE_ZONE_ID,
     HOT_WATER_ZONE_ID,
     entity_id,
+    load_fixture,
+    refresh,
     setup_integration,
 )
 
@@ -40,6 +45,11 @@ async def test_devices_linked_to_appliance(
     # The climate zone, the hot water zone, the heat pump and the gas boiler
     assert len(children) == 4
     assert all(device.via_device_id == appliance.id for device in children)
+    # On the maintainer's Elga Ace these instances do not collide. Their
+    # original unique IDs must survive an integration upgrade unchanged.
+    assert {f"{APPLIANCE_ID}_1", f"{APPLIANCE_ID}_2"} <= child_ids
+    assert f"{APPLIANCE_ID}_2_GasBoiler" not in child_ids
+    assert entity_id(hass, "sensor", f"{APPLIANCE_ID}_2", "energyConsumptionCH")
 
     # Home Assistant 2027.8 no longer accepts the deprecated via_device
     assert "deprecated `via_device`" not in caplog.text
@@ -85,6 +95,31 @@ async def test_hybrid_producers_with_same_instance_keep_separate_devices_and_ene
     assert hass.states.get(boiler_entity).attributes["unit_of_measurement"] == "m³"
 
 
+async def test_real_hybrid_collision_diagnostics_fixture(
+    hass: HomeAssistant, config_entry, mock_api
+) -> None:
+    """Use the anonymized producer data from an affected Elga Ace All-in-One."""
+    consumption = mock_api.async_get_consumption_data_for_today.return_value["data"][0]
+    consumption.update(load_fixture("hybrid_same_instance.json"))
+
+    await setup_integration(hass, config_entry, mock_api)
+
+    registry = dr.async_get(hass)
+    for producer_id in (f"{APPLIANCE_ID}_1", f"{APPLIANCE_ID}_1_GasBoiler"):
+        assert registry.async_get_device_by_identifier(
+            (DOMAIN, producer_id), config_entry.entry_id
+        ) is not None
+
+    pump_sensor = entity_id(hass, "sensor", f"{APPLIANCE_ID}_1", "energyConsumptionCH")
+    gas_sensor = entity_id(
+        hass, "sensor", f"{APPLIANCE_ID}_1_GasBoiler", "energyConsumptionCH"
+    )
+    assert pump_sensor is not None and gas_sensor is not None
+    assert float(hass.states.get(pump_sensor).state) == 3.6
+    assert hass.states.get(pump_sensor).attributes["unit_of_measurement"] == "kWh"
+    assert hass.states.get(gas_sensor).attributes["unit_of_measurement"] == "m³"
+
+
 def test_producer_ids_remain_unchanged_without_collisions() -> None:
     """Stand-alone, conventional hybrid and multi-producer IDs remain stable."""
     heat_pump = {
@@ -102,6 +137,14 @@ def test_producer_ids_remain_unchanged_without_collisions() -> None:
     assert resolver.resolve(APPLIANCE_ID, [boiler])[0][0][1] == f"{APPLIANCE_ID}_2"
     assert resolver.resolve(APPLIANCE_ID, [heat_pump, boiler])[0][0][1] == f"{APPLIANCE_ID}_1"
     assert resolver.get_id(APPLIANCE_ID, boiler) == f"{APPLIANCE_ID}_2"
+    # The appliance type must not force a suffix when its instances differ.
+    fresh = ProducerIdResolver()
+    fresh.resolve(APPLIANCE_ID, [heat_pump, boiler], appliance_type="HeatPump")
+    assert fresh.get_id(APPLIANCE_ID, heat_pump) == f"{APPLIANCE_ID}_1"
+    assert fresh.get_id(APPLIANCE_ID, boiler) == f"{APPLIANCE_ID}_2"
+    gas_first = ProducerIdResolver()
+    gas_first.resolve(APPLIANCE_ID, [boiler], appliance_type="HeatPump")
+    assert gas_first.get_id(APPLIANCE_ID, boiler) == f"{APPLIANCE_ID}_2"
 
 
 def test_colliding_ids_do_not_depend_on_api_producer_order() -> None:
@@ -187,7 +230,7 @@ def test_ambiguous_same_type_duplicate_producers_are_not_merged() -> None:
 
 
 def test_hybrid_first_reports_only_boiler() -> None:
-    """On a heat-pump appliance, the boiler must not take the heat pump ID."""
+    """Only a real collision or a registered electric entity reserves an ID."""
     boiler = {
         "producerType": "GasBoiler",
         "energyType": "NaturalGas",
@@ -201,8 +244,107 @@ def test_hybrid_first_reports_only_boiler() -> None:
     resolver = ProducerIdResolver()
     assert resolver.resolve(
         APPLIANCE_ID, [boiler], appliance_type="HeatPump"
-    )[0][0][1] == f"{APPLIANCE_ID}_1_GasBoiler"
+    )[0][0][1] == f"{APPLIANCE_ID}_1"
     restored = ProducerIdResolver(resolver.assignments)
     restored.resolve(APPLIANCE_ID, [pump, boiler], appliance_type="HeatPump")
-    assert restored.get_id(APPLIANCE_ID, boiler) == f"{APPLIANCE_ID}_1_GasBoiler"
-    assert restored.get_id(APPLIANCE_ID, pump) == f"{APPLIANCE_ID}_1"
+    assert restored.get_id(APPLIANCE_ID, boiler) == f"{APPLIANCE_ID}_1"
+    assert restored.get_id(APPLIANCE_ID, pump) == f"{APPLIANCE_ID}_1_HeatPumpAirSource"
+
+
+def test_boiler_only_preserves_a_registered_electric_legacy_id() -> None:
+    """A gas-only response must not steal an electric entity's legacy ID."""
+    boiler = {
+        "producerType": "GasBoiler",
+        "energyType": "NaturalGas",
+        "instanceWithinDevice": 1,
+    }
+    resolver = ProducerIdResolver()
+    resolver.resolve(
+        APPLIANCE_ID,
+        [boiler],
+        appliance_type="HeatPump",
+        existing_electric_legacy_ids={f"{APPLIANCE_ID}_1"},
+    )
+    assert resolver.get_id(APPLIANCE_ID, boiler) == f"{APPLIANCE_ID}_1_GasBoiler"
+
+
+async def test_boiler_only_checks_electric_entity_registry(
+    hass: HomeAssistant, config_entry, mock_api
+) -> None:
+    """Reserve a legacy ID only if a heat pump previously registered it."""
+    consumption = mock_api.async_get_consumption_data_for_today.return_value["data"][0]
+    boiler = consumption["producerPerformanceStatistics"]["producers"][1]
+    boiler["instanceWithinDevice"] = 1
+    consumption["producerPerformanceStatistics"]["producers"] = [boiler]
+    config_entry.add_to_hass(hass)
+    er.async_get(hass).async_get_or_create(
+        "sensor",
+        DOMAIN,
+        f"{DOMAIN}_{APPLIANCE_ID}_1_seasonalEfficiency",
+        config_entry=config_entry,
+    )
+
+    await setup_integration(hass, config_entry, mock_api)
+
+    registry = dr.async_get(hass)
+    assert registry.async_get_device_by_identifier(
+        (DOMAIN, f"{APPLIANCE_ID}_1_GasBoiler"), config_entry.entry_id
+    ) is not None
+    assert entity_id(
+        hass, "sensor", f"{APPLIANCE_ID}_1_GasBoiler", "energyConsumptionCH"
+    ) is not None
+
+
+async def test_incomplete_producers_do_not_create_unnamed_devices(
+    hass: HomeAssistant, config_entry, mock_api, caplog
+) -> None:
+    """Null producer fields must never create an appliance_None device."""
+    consumption = mock_api.async_get_consumption_data_for_today.return_value["data"][0]
+    producers = consumption["producerPerformanceStatistics"]["producers"]
+    missing = {
+        "instanceWithinDevice": None,
+        "producerType": None,
+        "energyType": None,
+    }
+    producers.append(missing)
+    await setup_integration(hass, config_entry, mock_api)
+
+    registry = dr.async_get(hass)
+    assert registry.async_get_device_by_identifier(
+        (DOMAIN, f"{APPLIANCE_ID}_None"), config_entry.entry_id
+    ) is None
+    assert entity_id(hass, "sensor", f"{APPLIANCE_ID}_None", "seasonalEfficiency") is None
+    resolver = hass.data[DOMAIN][config_entry.entry_id]["coordinator"].producer_id_resolver
+    assert resolver.get_id(APPLIANCE_ID, missing) is None
+    assert all("null" not in identity for identity in resolver.assignments)
+
+    # The API later stops reporting the placeholder. Valid producer IDs persist.
+    producers.remove(missing)
+    await refresh(hass, config_entry)
+    assert entity_id(hass, "sensor", f"{APPLIANCE_ID}_1", "seasonalEfficiency")
+    invalid_logs = [
+        record
+        for record in caplog.records
+        if record.levelno == logging.WARNING
+        and "Ignoring incomplete energy producer records" in record.message
+    ]
+    assert len(invalid_logs) == 1
+
+
+def test_indistinguishable_producer_warning_is_logged_once(caplog) -> None:
+    """Refreshes must not emit the same ambiguity warning every 15 minutes."""
+    pump = {
+        "producerType": "HeatPumpAirSource",
+        "energyType": "Electric",
+        "instanceWithinDevice": 1,
+    }
+    resolver = ProducerIdResolver()
+    for _ in range(3):
+        resolved, _ = resolver.resolve(APPLIANCE_ID, [pump, dict(pump)])
+        assert resolved == []
+    warnings = [
+        record
+        for record in caplog.records
+        if "Multiple indistinguishable producers" in record.message
+    ]
+    assert len(warnings) == 1
