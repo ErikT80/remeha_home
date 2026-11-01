@@ -134,8 +134,8 @@ async def test_action_returns_history(
 ) -> None:
     """Retrieve one day without writing entities or invoking heat controls."""
     await setup_integration(hass, config_entry, mock_api)
-    appliance = dr.async_get(hass).async_get_device(
-        identifiers={(DOMAIN, APPLIANCE_ID)}
+    appliance = dr.async_get(hass).async_get_device_by_identifier(
+        (DOMAIN, APPLIANCE_ID), config_entry.entry_id
     )
     assert appliance is not None
     mock_api.async_get_consumption_data_for_range.return_value = {
@@ -167,8 +167,8 @@ async def test_action_parent_resolution_and_monthly_batches(
 ) -> None:
     """A producer device targets its appliance; dates are split into batches."""
     await setup_integration(hass, config_entry, mock_api)
-    hp = dr.async_get(hass).async_get_device(
-        identifiers={(DOMAIN, f"{APPLIANCE_ID}_1")}
+    hp = dr.async_get(hass).async_get_device_by_identifier(
+        (DOMAIN, f"{APPLIANCE_ID}_1"), config_entry.entry_id
     )
     assert hp is not None
     mock_api.async_get_consumption_data_for_range.return_value = {"data": []}
