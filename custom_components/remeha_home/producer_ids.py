@@ -77,7 +77,7 @@ class ProducerIdResolver:
             len(valid_producers) != len(producers)
             and appliance_id not in self._warned_invalid_appliances
         ):
-            _LOGGER.warning(
+            _LOGGER.debug(
                 "Ignoring incomplete energy producer records for appliance %s",
                 appliance_id,
             )

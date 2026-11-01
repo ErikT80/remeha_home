@@ -307,6 +307,7 @@ async def test_incomplete_producers_do_not_create_unnamed_devices(
         "energyType": None,
     }
     producers.append(missing)
+    caplog.set_level(logging.DEBUG, logger="custom_components.remeha_home.producer_ids")
     await setup_integration(hass, config_entry, mock_api)
 
     registry = dr.async_get(hass)
@@ -322,13 +323,13 @@ async def test_incomplete_producers_do_not_create_unnamed_devices(
     producers.remove(missing)
     await refresh(hass, config_entry)
     assert entity_id(hass, "sensor", f"{APPLIANCE_ID}_1", "seasonalEfficiency")
-    invalid_logs = [
+    debug_logs = [
         record
         for record in caplog.records
-        if record.levelno == logging.WARNING
+        if record.levelno == logging.DEBUG
         and "Ignoring incomplete energy producer records" in record.message
     ]
-    assert len(invalid_logs) == 1
+    assert len(debug_logs) == 1
 
 
 def test_indistinguishable_producer_warning_is_logged_once(caplog) -> None:
