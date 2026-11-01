@@ -737,6 +737,25 @@ The appliance totals are not always the sum of the producers: the energy consume
 > [!NOTE]
 > On a hybrid system where the existing gas boiler heats the hot water, such as the Remeha Elga Ace, Remeha reports no gas for hot water: `energyConsumptionDHW` of the gas boiler stays 0.
 
+#### Historical daily consumption
+The `remeha_home.get_energy_history` action uses the same read-only `daily`
+endpoint, with `startDate` and `endDate` selecting **inclusive local calendar
+days**, even across daylight-saving changes. The action sends
+`<date>T00:00:00.000Z` to `<date>T23:59:59.999Z`, splits requests into
+31-day batches, and allows up to 366 days at a time. A five-day action response
+spanning the October 2026 clock change returned one record for each date.
+
+For completed days, `timeStamp` is the local calendar date at midnight with a
+UTC-looking suffix: it must not be shifted into another date. Missing or
+`isDataReported: false` days are reported separately. The action keeps
+heat-pump electrical consumption and delivered space-heating energy separate
+from the gas boiler's energy (the API reports gas energy in kWh, not m³).
+Incomplete or indistinguishable producer records cannot contribute to a
+reliable total. These are Remeha estimates, not calibrated meter readings.
+
+The successful five-day test checked the normalized action output, not a
+captured raw historical API response.
+
 #### Daily consumption
 - The integration asks for today with local midnight and a `Z` suffix (`<today> 00:00:00.000Z` to `<today> 23:59:59.000Z`), which returns exactly today's item.
   A real UTC window (from 22:00 or 23:00 the day before) also returns yesterday's item.

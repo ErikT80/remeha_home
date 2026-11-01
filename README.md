@@ -66,6 +66,40 @@ You can simply log in using the credentials that you would use in the respective
     The energy values come from Remeha and are updated every 15 minutes. Remeha only reports them with a delay of about 2 hours, and right after midnight the values of the new day start at 0.
     On hybrid setups where the existing gas boiler heats the hot water, such as the Remeha Elga Ace, Remeha does not report the gas used for hot water, so that sensor stays at 0.
 
+### Read-only energy history
+
+Use the `remeha_home.get_energy_history` action in **Developer tools → Actions**
+to retrieve the Remeha cloud's indicative daily energy estimates from a past
+period. Select the Remeha appliance, heat-pump producer or boiler producer in
+the device picker. The history is always retrieved for its parent appliance,
+with heat sources reported separately.
+
+```yaml
+action: remeha_home.get_energy_history
+data:
+  device_id: "<select your Remeha device in the visual editor>"
+  start_date: "2026-01-01"
+  end_date: "2026-01-31"
+```
+
+The action **returns JSON data**, with one record per reported calendar day:
+`heat_pump_consumed_kwh`, `heat_pump_delivered_kwh`, `heat_pump_cop`,
+`gas_heating_consumed_kwh`, and a `producers` list containing the original
+heating consumption/production estimates for each valid producer.
+`missing_dates` lists days without a reported daily record. Missing or
+ambiguous producer totals and COP remain `null`, not zero. The data can be copied from
+the action response for offline analysis. It is not automatically exported as
+a CSV or inserted into Home Assistant statistics.
+
+Both dates are included, with a limit of 366 days per action. The integration
+automatically splits long requests into batches of at most 31 days. It reuses
+the existing OAuth credentials and never changes your thermostat or publishes
+historical data as new sensor states. These are **Remeha's estimates**, not
+independently calibrated metered heat; the calculated daily COP is the heat
+pump's estimated delivered *space-heating* kWh divided by its estimated
+electrical input kWh, not the API's `seasonalEfficiency` field. A hybrid gas
+boiler's heating energy is kept separate.
+
 ## Installation
 This integration needs Home Assistant 2026.10 or newer.
 
