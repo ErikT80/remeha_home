@@ -59,6 +59,10 @@ You can simply log in using the credentials that you would use in the respective
     - For heat pumps (and other electric producers): the energy consumed and delivered today for heating, hot water and cooling, and the seasonal efficiency
     - For gas boilers: the gas used today for heating and hot water, in m³
 
+    If the heat pump and gas boiler of a hybrid report the same instance number,
+    the gas boiler gets a separate device. Existing IDs are kept when possible;
+    check sensor names, units and history after updating.
+
     The energy values come from Remeha and are updated every 15 minutes. Remeha only reports them with a delay of about 2 hours, and right after midnight the values of the new day start at 0.
     On hybrid setups where the existing gas boiler heats the hot water, such as the Remeha Elga Ace, Remeha does not report the gas used for hot water, so that sensor stays at 0.
 

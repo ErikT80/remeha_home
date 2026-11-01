@@ -29,7 +29,6 @@ from .const import (
 from .coordinator import (
     PRODUCER_STATS,
     RemehaHomeUpdateCoordinator,
-    get_producer_id,
     get_producers,
 )
 from .util import remeha_time, remeha_utc_time, reports_dhw_temperature
@@ -119,16 +118,24 @@ async def async_setup_entry(
         """
         new_entities = []
         for appliance in coordinator.data["appliances"]:
-            for producer in get_producers(appliance["consumptionData"]):
-                producer_id = get_producer_id(appliance["applianceId"], producer)
+            producers = get_producers(appliance["consumptionData"])
+            for producer in producers:
+                producer_id = coordinator.producer_id_resolver.get_id(
+                    appliance["applianceId"], producer
+                )
+                if producer_id is None:
+                    continue
                 if producer_id in known_producer_ids:
                     continue
                 known_producer_ids.add(producer_id)
 
                 if producer.get("energyType") == "NaturalGas":
                     entity_descriptions = GAS_PRODUCER_SENSOR_TYPES
-                else:
+                elif producer.get("energyType") == "Electric":
                     entity_descriptions = ELECTRIC_PRODUCER_SENSOR_TYPES
+                else:
+                    # Unsupported energy sources must not get electrical sensors.
+                    continue
                 new_entities.extend(
                     RemehaHomeSensor(coordinator, producer_id, entity_description)
                     for entity_description in entity_descriptions
