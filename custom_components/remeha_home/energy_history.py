@@ -7,8 +7,11 @@ totals: those may include both the heat pump and the gas boiler.
 
 from __future__ import annotations
 
+from collections import Counter
 from datetime import date, timedelta
 import math
+
+from .producer_ids import is_valid_producer
 
 MAX_HISTORY_DAYS = 366
 HISTORY_BATCH_DAYS = 31
@@ -45,6 +48,17 @@ def _sum_complete(values: list[float | None]) -> float | None:
     return sum(values)
 
 
+def _producer_category(kind: object, source: object) -> str | None:
+    """Identify the affected energy total when a producer is incomplete."""
+    if not isinstance(kind, str) or not isinstance(source, str):
+        return None
+    if kind.startswith("HeatPump") and source == "Electric":
+        return "heat_pump"
+    if kind == "GasBoiler" and source == "NaturalGas":
+        return "gas"
+    return None
+
+
 def normalize_history_day(item: dict) -> dict | None:
     """Return a JSON-safe day with per-producer and heat-pump-only metrics."""
     if not isinstance(item, dict) or item.get("isDataReported") is False:
@@ -57,35 +71,52 @@ def normalize_history_day(item: dict) -> dict | None:
     except ValueError:
         return None
 
-    producer_data = (item.get("producerPerformanceStatistics") or {}).get(
-        "producers"
-    ) or []
+    statistics = item.get("producerPerformanceStatistics")
+    producer_data = statistics.get("producers") if isinstance(statistics, dict) else None
+    raw_producers = producer_data if isinstance(producer_data, list) else []
+    valid_producers = [
+        producer for producer in raw_producers if is_valid_producer(producer)
+    ]
+    # The API can temporarily repeat or omit producers. Like the live
+    # resolver, reject indistinguishable records rather than double count them.
+    identities = Counter(
+        (
+            int(producer["instanceWithinDevice"]),
+            producer["producerType"],
+            producer["energyType"],
+        )
+        for producer in valid_producers
+    )
+    incomplete_categories: set[str] = set()
     producers = []
-    if isinstance(producer_data, list):
-        for producer in producer_data:
-            if not isinstance(producer, dict):
-                continue
-            kind, source = producer.get("producerType"), producer.get("energyType")
-            # The API sometimes lists incomplete/unnamed producers on hybrids.
-            if (
-                not isinstance(kind, str)
-                or not kind
-                or not isinstance(source, str)
-                or not source
-            ):
-                continue
-            producers.append(
-                {
-                    "producer_type": kind,
-                    "energy_type": source,
-                    "heating_consumed_kwh": _energy(
-                        producer.get("energyConsumptionCH")
-                    ),
-                    "heating_delivered_kwh": _energy(
-                        producer.get("energyProductionCH")
-                    ),
-                }
-            )
+    for producer in raw_producers:
+        if not isinstance(producer, dict):
+            continue
+        kind, source = producer.get("producerType"), producer.get("energyType")
+        category = _producer_category(kind, source)
+        if not is_valid_producer(producer):
+            # An unknown placeholder cannot be assigned to a heat source. If
+            # the source is recognizable, its total must remain unknown.
+            if category is not None:
+                incomplete_categories.add(category)
+            continue
+        identity = (int(producer["instanceWithinDevice"]), kind, source)
+        if identities[identity] > 1:
+            if category is not None:
+                incomplete_categories.add(category)
+            continue
+        producers.append(
+            {
+                "producer_type": kind,
+                "energy_type": source,
+                "heating_consumed_kwh": _energy(
+                    producer.get("energyConsumptionCH")
+                ),
+                "heating_delivered_kwh": _energy(
+                    producer.get("energyProductionCH")
+                ),
+            }
+        )
 
     heat_pumps = [
         producer
@@ -99,9 +130,23 @@ def normalize_history_day(item: dict) -> dict | None:
         if producer["producer_type"] == "GasBoiler"
         and producer["energy_type"] == "NaturalGas"
     ]
-    consumed = _sum_complete([p["heating_consumed_kwh"] for p in heat_pumps])
-    delivered = _sum_complete([p["heating_delivered_kwh"] for p in heat_pumps])
-    gas = _sum_complete([p["heating_consumed_kwh"] for p in boilers])
+    # Incomplete or duplicated producers make their category's total unknown,
+    # even if other producers of that type still have valid measurements.
+    consumed = (
+        _sum_complete([p["heating_consumed_kwh"] for p in heat_pumps])
+        if "heat_pump" not in incomplete_categories
+        else None
+    )
+    delivered = (
+        _sum_complete([p["heating_delivered_kwh"] for p in heat_pumps])
+        if "heat_pump" not in incomplete_categories
+        else None
+    )
+    gas = (
+        _sum_complete([p["heating_consumed_kwh"] for p in boilers])
+        if "gas" not in incomplete_categories
+        else None
+    )
     cop = (
         delivered / consumed
         if consumed is not None and consumed > 0 and delivered is not None

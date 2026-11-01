@@ -56,6 +56,112 @@ def test_normalize_hybrid_and_cop() -> None:
     assert all("instance_within_device" not in row for row in row["producers"])
 
 
+def test_incomplete_identified_heat_pump_makes_total_unknown() -> None:
+    """Never report a partial sum if a recognizable producer has no instance."""
+    item = _january_9()
+    item["producerPerformanceStatistics"]["producers"].append(
+        {
+            "instanceWithinDevice": None,
+            "producerType": "HeatPumpAirSource",
+            "energyType": "Electric",
+            "energyConsumptionCH": 3.0,
+            "energyProductionCH": 12.0,
+        }
+    )
+    row = normalize_history_day(item)
+    assert row["heat_pump_consumed_kwh"] is None
+    assert row["heat_pump_delivered_kwh"] is None
+    assert row["heat_pump_cop"] is None
+    assert row["gas_heating_consumed_kwh"] == 2.0
+    assert len(row["producers"]) == 2
+
+
+def test_duplicate_heat_pump_records_are_not_double_counted() -> None:
+    """Duplicated API producers must not double the historical energy totals."""
+    item = _january_9()
+    producers = item["producerPerformanceStatistics"]["producers"]
+    producers.append(copy.deepcopy(producers[0]))
+    row = normalize_history_day(item)
+    assert row["heat_pump_consumed_kwh"] is None
+    assert row["heat_pump_delivered_kwh"] is None
+    assert row["heat_pump_cop"] is None
+    assert row["gas_heating_consumed_kwh"] == 2.0
+    assert len(row["producers"]) == 1
+
+
+def test_duplicate_gas_producer_only_invalidates_gas() -> None:
+    """Ambiguous boiler measurements must not hide valid heat-pump energy."""
+    item = _january_9()
+    producers = item["producerPerformanceStatistics"]["producers"]
+    producers.append(copy.deepcopy(producers[1]))
+    row = normalize_history_day(item)
+    assert row["heat_pump_consumed_kwh"] == 18.0
+    assert row["heat_pump_delivered_kwh"] == 68.0
+    assert row["gas_heating_consumed_kwh"] is None
+
+
+def test_shared_instance_and_distinct_pumps_remain_valid() -> None:
+    """A hybrid collision is valid, as are multiple distinct heat pumps."""
+    item = _january_9()
+    producers = item["producerPerformanceStatistics"]["producers"]
+    producers[1]["instanceWithinDevice"] = 1
+    row = normalize_history_day(item)
+    assert row["heat_pump_consumed_kwh"] == 18.0
+    assert row["gas_heating_consumed_kwh"] == 2.0
+
+    extra_pump = copy.deepcopy(producers[0])
+    extra_pump["instanceWithinDevice"] = "3"
+    extra_pump["energyConsumptionCH"] = 1.0
+    extra_pump["energyProductionCH"] = 4.0
+    producers.append(extra_pump)
+    row = normalize_history_day(item)
+    assert row["heat_pump_consumed_kwh"] == 19.0
+    assert row["heat_pump_delivered_kwh"] == 72.0
+    assert row["heat_pump_cop"] == pytest.approx(72 / 19)
+
+
+def test_malformed_performance_statistics_remain_unknown() -> None:
+    """Malformed API structures must not break the action."""
+    item = _january_9()
+    item["producerPerformanceStatistics"] = []
+    row = normalize_history_day(item)
+    assert row["heat_pump_consumed_kwh"] is None
+    assert row["gas_heating_consumed_kwh"] is None
+
+
+def test_completed_daily_history_across_dst_matches_observed_action_values() -> None:
+    """Regression for five days observed through HA's action, not a raw fixture."""
+    expected = [
+        ("2026-10-23", 5.2, 24.8),
+        ("2026-10-24", 6.3, 29.8),
+        ("2026-10-25", 5.5, 24.8),
+        ("2026-10-26", 7.0, 30.8),
+        ("2026-10-27", 1.7, 9.3),
+    ]
+    raw_days = []
+    for day, consumed, delivered in expected:
+        item = _january_9()
+        item["timeStamp"] = f"{day}T00:00:00+00:00"
+        producers = item["producerPerformanceStatistics"]["producers"]
+        producers[0]["energyConsumptionCH"] = consumed
+        producers[0]["energyProductionCH"] = delivered
+        producers[1]["energyConsumptionCH"] = 0.0
+        raw_days.append(item)
+
+    result = combine_history(
+        date(2026, 10, 23), date(2026, 10, 27), [{"data": raw_days}]
+    )
+    assert result["missing_dates"] == []
+    for row, (day, consumed, delivered) in zip(
+        result["days"], expected, strict=True
+    ):
+        assert row["date"] == day
+        assert row["heat_pump_consumed_kwh"] == consumed
+        assert row["heat_pump_delivered_kwh"] == delivered
+        assert row["heat_pump_cop"] == pytest.approx(delivered / consumed)
+        assert row["gas_heating_consumed_kwh"] == 0.0
+
+
 def test_missing_heat_pump_is_unknown_not_zero() -> None:
     """Never substitute appliance totals if the heat-pump fields are absent."""
     item = _january_9()

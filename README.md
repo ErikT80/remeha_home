@@ -86,8 +86,8 @@ The action **returns JSON data**, with one record per reported calendar day:
 `heat_pump_consumed_kwh`, `heat_pump_delivered_kwh`, `heat_pump_cop`,
 `gas_heating_consumed_kwh`, and a `producers` list containing the original
 heating consumption/production estimates for each valid producer.
-`missing_dates` lists days for which Remeha returned no usable record;
-unknown energy and COP remain `null`, not zero. The data can be copied from
+`missing_dates` lists days without a reported daily record. Missing or
+ambiguous producer totals and COP remain `null`, not zero. The data can be copied from
 the action response for offline analysis. It is not automatically exported as
 a CSV or inserted into Home Assistant statistics.
 
