@@ -16,6 +16,7 @@ from .coordinator import RemehaHomeUpdateCoordinator
 from .energy_history_service import async_register_energy_history_service
 from .holiday import STORAGE_VERSION, HolidayModeRestorer, storage_key
 from .producer_ids import ProducerIdResolver
+from .signalr_probe_service import async_register_signalr_probe_service
 
 PLATFORMS: list[Platform] = [
     Platform.BINARY_SENSOR,
@@ -47,6 +48,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     )
 
     async_register_energy_history_service(hass)
+    async_register_signalr_probe_service(hass)
 
     return True
 

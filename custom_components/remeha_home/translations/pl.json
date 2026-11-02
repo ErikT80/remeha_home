@@ -114,6 +114,20 @@
             "name": "Anuluj tryb urlopowy",
             "description": "Zatrzymaj trwający tryb urlopowy albo usuń zaplanowany."
         },
+        "probe_signalr": {
+            "name": "Sprawdź SignalR (tylko odczyt)",
+            "description": "Eksperymentalne połączenie SignalR uruchamiane ręcznie. Przez krótki czas nasłuchuje i zwraca wyłącznie nazwy zdarzeń oraz typy pól, nigdy surowe wartości ani dane logowania. Nie zmienia ustawień ogrzewania.",
+            "fields": {
+                "device_id": {
+                    "name": "Urządzenie Remeha",
+                    "description": "Wybierz urządzenie Remeha, aby wskazać konto."
+                },
+                "listen_seconds": {
+                    "name": "Czas nasłuchiwania",
+                    "description": "Nasłuchuj przez 5–30 sekund naturalnych aktualizacji stanu."
+                }
+            }
+        },
         "get_energy_history": {
             "name": "Pobierz historię energii",
             "description": "Pobierz orientacyjne dzienne dane energetyczne urządzenia Remeha bez zmiany ogrzewania ani tworzenia encji. Maksymalnie 366 dni na żądanie.",

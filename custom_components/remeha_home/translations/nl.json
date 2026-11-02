@@ -114,6 +114,20 @@
             "name": "Vakantiemodus stoppen",
             "description": "Stop een actieve vakantiemodus of verwijder een geplande."
         },
+        "probe_signalr": {
+            "name": "SignalR testen (alleen-lezen)",
+            "description": "Experimentele, handmatig gestarte SignalR-verbinding. Luistert kort en geeft alleen gebeurtenisnamen en veldtypen terug, nooit ruwe waarden of inloggegevens. Wijzigt geen verwarmingsinstellingen.",
+            "fields": {
+                "device_id": {
+                    "name": "Remeha-toestel",
+                    "description": "Kies een Remeha-toestel om het juiste account te gebruiken."
+                },
+                "listen_seconds": {
+                    "name": "Luistertijd",
+                    "description": "Luister 5–30 seconden naar eventuele natuurlijke statusupdates."
+                }
+            }
+        },
         "get_energy_history": {
             "name": "Energiehistorie ophalen",
             "description": "Vraag de indicatieve dagelijkse energiegegevens van het gekozen Remeha-toestel op. Deze alleen-lezen actie maakt geen entiteiten aan en wijzigt de verwarming niet. Maximaal 366 dagen per aanvraag.",

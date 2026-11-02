@@ -114,6 +114,20 @@
             "name": "Cancel holiday mode",
             "description": "Stop an active holiday mode or remove a scheduled one."
         },
+        "probe_signalr": {
+            "name": "Probe SignalR (read-only)",
+            "description": "Experimental, manually triggered SignalR connection. Listens briefly and returns only event names and field types, never raw values or credentials. Does not change heating settings.",
+            "fields": {
+                "device_id": {
+                    "name": "Remeha device",
+                    "description": "Choose a Remeha device to select its account."
+                },
+                "listen_seconds": {
+                    "name": "Listen duration",
+                    "description": "Listen for 5–30 seconds to observe any naturally occurring status updates."
+                }
+            }
+        },
         "get_energy_history": {
             "name": "Get energy history",
             "description": "Retrieve Remeha's indicative daily energy estimates for the selected appliance. This read-only action returns data without creating entities or changing your heating settings. Up to 366 days per request.",

@@ -100,6 +100,35 @@ pump's estimated delivered *space-heating* kWh divided by its estimated
 electrical input kWh, not the API's `seasonalEfficiency` field. A hybrid gas
 boiler's heating energy is kept separate.
 
+### Experimental read-only SignalR probe
+
+For investigating whether the Remeha cloud offers additional event fields,
+this experimental branch has a manually invoked `remeha_home.probe_signalr`
+action in **Developer tools → Actions**. Choose a Remeha device and a listening
+duration from 5 to 30 seconds:
+
+```yaml
+action: remeha_home.probe_signalr
+data:
+  device_id: "<select your Remeha device in the visual editor>"
+  listen_seconds: 20
+```
+
+The action attempts a SignalR negotiation and listens briefly for server
+events. It returns **only event names and field names/types**, never the actual
+values, device identifiers, OAuth tokens, or connection IDs. It does not
+create entities, write states, modify heating settings, or start a permanent
+background connection. It makes one protocol negotiation `POST` (not a
+settings write), opens a WebSocket, and sends only the required JSON protocol
+handshake; it does not invoke hub methods. Existing dashboard polling and
+all other integration features are unchanged.
+
+The SignalR endpoint comes from unofficial mobile-app reverse engineering and
+has **not been verified on a Remeha Home installation**. A negotiation error,
+unsupported redirect, or successful connection with zero events is a possible
+outcome. The diagnostic only supports the standard JSON/WebSocket transport;
+absence of events does not prove the API has no additional information.
+
 ## Installation
 This integration needs Home Assistant 2026.10 or newer.
 

@@ -38,3 +38,21 @@ get_energy_history:
       example: "2026-01-31"
       selector:
         date:
+
+probe_signalr:
+  fields:
+    device_id:
+      required: true
+      selector:
+        device:
+          integration: remeha_home
+    listen_seconds:
+      required: false
+      default: 20
+      example: 20
+      selector:
+        number:
+          min: 5
+          max: 30
+          step: 1
+          mode: box

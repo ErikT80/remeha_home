@@ -23,6 +23,8 @@ from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
+BDR_SUBSCRIPTION_KEY = "df605c5470d846fc91e848b1cc653ddf"
+
 # Holiday mode: POST /appliances/{id}/holidayschedule (ApplianceHolidayScheduleRequestDto
 # in the Remeha Home app), verified against the live API on 2026-10-22. The API keeps
 # whole days only (it stores <date>T00:00:01Z) and updates the dashboard a few
@@ -86,7 +88,7 @@ class RemehaHomeAPI:
             **kwargs,
             headers={
                 **headers,
-                "Ocp-Apim-Subscription-Key": "df605c5470d846fc91e848b1cc653ddf",
+                "Ocp-Apim-Subscription-Key": BDR_SUBSCRIPTION_KEY,
             },
         )
 
@@ -101,6 +103,14 @@ class RemehaHomeAPI:
         json = await response.json()
         _LOGGER.debug(json)
         return json
+
+    async def async_negotiate_signalr(self) -> dict:
+        """Negotiate a diagnostic SignalR connection without changing settings."""
+        response = await self._async_api_request(
+            "POST", "/homes/signalr/negotiate", params={"negotiateVersion": 1}
+        )
+        response.raise_for_status()
+        return await response.json()
 
     async def async_set_manual(self, climate_zone_id: str, setpoint: float):
         """Set a climate zone to manual mode with a specific temperature setpoint."""

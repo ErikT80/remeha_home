@@ -114,6 +114,20 @@
             "name": "Annuler le mode vacances",
             "description": "Arrêter un mode vacances actif ou supprimer un mode vacances planifié."
         },
+        "probe_signalr": {
+            "name": "Tester SignalR (lecture seule)",
+            "description": "Connexion SignalR expérimentale lancée manuellement. Écoute brièvement et renvoie uniquement les noms d’événements et les types de champs, jamais les valeurs brutes ni les identifiants. Ne modifie aucun réglage de chauffage.",
+            "fields": {
+                "device_id": {
+                    "name": "Appareil Remeha",
+                    "description": "Choisir un appareil Remeha pour sélectionner son compte."
+                },
+                "listen_seconds": {
+                    "name": "Durée d'écoute",
+                    "description": "Écouter pendant 5 à 30 secondes les éventuelles mises à jour d'état naturelles."
+                }
+            }
+        },
         "get_energy_history": {
             "name": "Obtenir l'historique énergétique",
             "description": "Récupérer les estimations quotidiennes indicatives du dispositif Remeha sélectionné, sans modifier le chauffage ni créer d'entités. Maximum 366 jours par demande.",
