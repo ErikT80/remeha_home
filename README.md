@@ -123,11 +123,14 @@ settings write), opens a WebSocket, and sends only the required JSON protocol
 handshake; it does not invoke hub methods. Existing dashboard polling and
 all other integration features are unchanged.
 
-The SignalR endpoint comes from unofficial mobile-app reverse engineering and
-has **not been verified on a Remeha Home installation**. A negotiation error,
-unsupported redirect, or successful connection with zero events is a possible
-outcome. The diagnostic only supports the standard JSON/WebSocket transport;
-absence of events does not prove the API has no additional information.
+The SignalR endpoint comes from unofficial mobile-app reverse engineering.
+Negotiation may redirect to Azure SignalR: the probe follows only HTTPS/WSS
+redirects to `*.service.signalr.net/client/` using the temporary token returned
+by negotiation, **never** the Remeha OAuth token or subscription key. It will
+reject redirects to other hosts or paths. A connection error or a successful
+connection with zero events is still possible. The diagnostic only supports the
+standard JSON/WebSocket transport; absence of events does not prove the API has
+no additional information.
 
 ## Installation
 This integration needs Home Assistant 2026.10 or newer.

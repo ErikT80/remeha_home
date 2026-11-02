@@ -17,6 +17,7 @@ from custom_components.remeha_home.signalr_probe import (
     SIGNALR_HUB_URL,
     SignalRProbeError,
     _shape,
+    _trusted_signalr_redirect,
     async_probe_signalr,
 )
 from custom_components.remeha_home.signalr_probe_service import SERVICE_PROBE_SIGNALR
@@ -164,7 +165,65 @@ async def test_probe_rejects_unverified_redirect_without_credentials() -> None:
         "url": "https://untrusted.example/signalr/",
         "accessToken": "SECRET_OTHER_TOKEN",
     }
-    with pytest.raises(SignalRProbeError, match="redirect is not supported"):
+    with pytest.raises(SignalRProbeError, match="redirect destination is not trusted"):
+        await async_probe_signalr(api, session, 5)
+    api.async_get_access_token.assert_not_awaited()
+    session.ws_connect.assert_not_awaited()
+
+
+async def test_probe_accepts_azure_redirect_with_only_redirect_credentials() -> None:
+    """Follow a trusted Azure redirect without sending Remeha OAuth or BDR key."""
+    api, session, ws = _api_and_session(["{}" + RECORD_SEPARATOR])
+    url = "https://example.service.signalr.net/client/?hub=home&extra=1"
+    api.async_negotiate_signalr.return_value = {
+        "url": url,
+        "accessToken": "SECRET_AZURE_REDIRECT_TOKEN",
+    }
+
+    result = await async_probe_signalr(api, session, 5)
+
+    assert result["connected"]
+    assert result["handshake_acknowledged"]
+    assert "SECRET_AZURE_REDIRECT_TOKEN" not in json.dumps(result)
+    assert ws.closed
+    assert ws.sent == ['{"protocol":"json","version":1}' + RECORD_SEPARATOR]
+    api.async_get_access_token.assert_not_awaited()
+    call = session.ws_connect.call_args
+    assert call.args == (url,)
+    assert call.kwargs["headers"] == {
+        "Authorization": "Bearer SECRET_AZURE_REDIRECT_TOKEN"
+    }
+    assert call.kwargs["params"] is None
+    assert call.kwargs["allow_redirects"] is False
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "http://example.service.signalr.net/client/",
+        "https://example.service.signalr.net.evil.example/client/",
+        "https://example.service.signalr.net@evil.example/client/",
+        "https://evil.example@sample.service.signalr.net/client/",
+        "https://sample.service.signalr.net:8443/client/",
+        "https://sample.service.signalr.net/admin/",
+        "https://service.signalr.net/client/",
+        "https://localhost/client/",
+        "https://sample.service.signalr.net/client/#fragment",
+        "not a url",
+    ],
+)
+def test_probe_redirect_allowlist_rejects_untrusted_targets(url: str) -> None:
+    """Do not open WebSockets to arbitrary hosts or unsafe service paths."""
+    assert not _trusted_signalr_redirect(url)
+
+
+async def test_probe_rejects_redirect_without_token() -> None:
+    """Refuse unauthenticated redirects instead of forwarding Remeha tokens."""
+    api, session, _ = _api_and_session([])
+    api.async_negotiate_signalr.return_value = {
+        "url": "https://sample.service.signalr.net/client/?hub=home"
+    }
+    with pytest.raises(SignalRProbeError, match="returned no access token"):
         await async_probe_signalr(api, session, 5)
     api.async_get_access_token.assert_not_awaited()
     session.ws_connect.assert_not_awaited()

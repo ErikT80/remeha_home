@@ -353,17 +353,18 @@ An unofficial reverse-engineering project reports a SignalR hub at
 The opt-in `probe_signalr` diagnostic attempts the following protocol-only
 operations, without changing appliance or zone settings:
 
-1. `POST /homes/signalr/negotiate?negotiateVersion=1` to obtain a connection token.
-2. Open a WebSocket to `/homes/signalr/?id=<connection_token>` on the same host.
+1. `POST /homes/signalr/negotiate?negotiateVersion=1` to negotiate a connection.
+2. If a connection token is returned, open a WebSocket to `/homes/signalr/?id=<connection_token>` on the same host. If a redirect is returned, connect only to a verified `*.service.signalr.net/client/` endpoint using its temporary Azure SignalR access token, never the Remeha OAuth token or subscription key.
 3. Send the SignalR JSON handshake, and listen for a short time without invoking methods.
 
 No credentials, connection tokens, device IDs, or event values are returned
 by the action. Only hub method names and event payload **structure** are
-included. Redirect-based SignalR negotiation and non-WebSocket transports
-are intentionally unsupported for this experimental investigation.
+included. Redirects to other hosts and non-WebSocket transports are intentionally
+unsupported for this experimental investigation.
 
 Sources: [community reverse-engineering notes](https://github.com/SimoneAvogadro/De-Dietrich-API/blob/master/docs/06-signalr.md)
-and the [official SignalR protocol specification](https://github.com/dotnet/aspnetcore/blob/main/src/SignalR/docs/specs/HubProtocol.md).
+the [official SignalR protocol specification](https://github.com/dotnet/aspnetcore/blob/main/src/SignalR/docs/specs/HubProtocol.md),
+and [Azure SignalR client negotiation](https://learn.microsoft.com/en-us/azure/azure-signalr/signalr-concept-client-negotiation).
 
 ## Appliances
 

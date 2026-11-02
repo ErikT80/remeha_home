@@ -10,6 +10,7 @@ from time import monotonic
 from typing import Any
 
 from aiohttp import ClientSession, WSMsgType
+from yarl import URL
 
 from .api import BDR_SUBSCRIPTION_KEY, RemehaHomeAPI
 
@@ -18,10 +19,31 @@ RECORD_SEPARATOR = "\x1e"
 MAX_EVENTS = 20
 MAX_MESSAGE_BUFFER = 65536
 _SAFE_NAME = re.compile(r"^[A-Za-z_][A-Za-z0-9_.-]{0,79}$")
+_AZURE_SIGNALR_HOST = re.compile(r"^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.service\.signalr\.net$")
 
 
 class SignalRProbeError(Exception):
     """A safe diagnostic error, without credentials or arbitrary server text."""
+
+
+def _trusted_signalr_redirect(url: Any) -> bool:
+    """Restrict redirected credentials to Azure SignalR's client endpoint."""
+    if not isinstance(url, str) or len(url) > 2048:
+        return False
+    try:
+        destination = URL(url)
+        return (
+            destination.scheme in ("https", "wss")
+            and destination.host is not None
+            and _AZURE_SIGNALR_HOST.fullmatch(destination.host) is not None
+            and destination.port == 443
+            and destination.path == "/client/"
+            and destination.user is None
+            and destination.password is None
+            and not destination.fragment
+        )
+    except ValueError:
+        return False
 
 
 def _shape(value: Any, depth: int = 0) -> Any:
@@ -123,31 +145,42 @@ async def async_probe_signalr(
     if "error" in negotiate:
         raise SignalRProbeError("SignalR negotiation was rejected")
     if "url" in negotiate or "accessToken" in negotiate:
-        # No forwarding credentials to an unverified redirect destination.
-        raise SignalRProbeError("SignalR redirect is not supported by this diagnostic")
+        # Azure SignalR redirects clients to its own service. The original Remeha
+        # OAuth token and subscription key must never leave Remeha's host.
+        destination = negotiate.get("url")
+        token = negotiate.get("accessToken")
+        if not _trusted_signalr_redirect(destination):
+            raise SignalRProbeError("SignalR redirect destination is not trusted")
+        if not isinstance(token, str) or not token:
+            raise SignalRProbeError("SignalR redirect returned no access token")
+        ws_url = destination
+        params = None
+        headers = {"Authorization": f"Bearer {token}"}
+    else:
+        transports = negotiate.get("availableTransports")
+        if isinstance(transports, list) and not any(
+            isinstance(item, dict) and item.get("transport") == "WebSockets"
+            for item in transports
+        ):
+            raise SignalRProbeError("SignalR server did not offer WebSockets")
 
-    transports = negotiate.get("availableTransports")
-    if isinstance(transports, list) and not any(
-        isinstance(item, dict) and item.get("transport") == "WebSockets"
-        for item in transports
-    ):
-        raise SignalRProbeError("SignalR server did not offer WebSockets")
+        connection_token = negotiate.get("connectionToken") or negotiate.get("connectionId")
+        if not isinstance(connection_token, str) or not connection_token:
+            raise SignalRProbeError("SignalR negotiation returned no connection token")
 
-    connection_token = negotiate.get("connectionToken") or negotiate.get("connectionId")
-    if not isinstance(connection_token, str) or not connection_token:
-        raise SignalRProbeError("SignalR negotiation returned no connection token")
-
-    bearer_token = await api.async_get_access_token()
-    headers = {
-        "Authorization": f"Bearer {bearer_token}",
-        "Ocp-Apim-Subscription-Key": BDR_SUBSCRIPTION_KEY,
-    }
-    # The connection token is sensitive: never include the URL or exceptions in
-    # action responses or logs. This URL is deliberately fixed to Remeha's host.
+        bearer_token = await api.async_get_access_token()
+        ws_url = SIGNALR_HUB_URL
+        params = {"id": connection_token}
+        headers = {
+            "Authorization": f"Bearer {bearer_token}",
+            "Ocp-Apim-Subscription-Key": BDR_SUBSCRIPTION_KEY,
+        }
+    # Never include URLs, tokens or server exceptions in action responses.
+    # HTTP/WebSocket redirects are disabled even after validating negotiation.
     ws = await asyncio.wait_for(
         session.ws_connect(
-            SIGNALR_HUB_URL,
-            params={"id": connection_token},
+            ws_url,
+            params=params,
             headers=headers,
             max_msg_size=MAX_MESSAGE_BUFFER,
             allow_redirects=False,
