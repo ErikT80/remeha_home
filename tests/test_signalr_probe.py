@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import json
+from inspect import signature
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from aiohttp import WSMessage, WSMsgType
+from aiohttp import ClientSession, WSMessage, WSMsgType
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
 import pytest
@@ -20,7 +21,10 @@ from custom_components.remeha_home.signalr_probe import (
     _trusted_signalr_redirect,
     async_probe_signalr,
 )
-from custom_components.remeha_home.signalr_probe_service import SERVICE_PROBE_SIGNALR
+from custom_components.remeha_home.signalr_probe_service import (
+    SERVICE_PROBE_SIGNALR,
+    _deny_http_redirects,
+)
 
 from .conftest import APPLIANCE_ID, setup_integration
 
@@ -194,7 +198,27 @@ async def test_probe_accepts_azure_redirect_with_only_redirect_credentials() -> 
         "Authorization": "Bearer SECRET_AZURE_REDIRECT_TOKEN"
     }
     assert call.kwargs["params"] is None
-    assert call.kwargs["allow_redirects"] is False
+    # A mock accepts any keyword; the real aiohttp WebSocket method does not.
+    # This catches invalid options such as allow_redirects at test time.
+    assert set(call.kwargs).issubset(signature(ClientSession.ws_connect).parameters)
+
+
+async def test_probe_rejects_http_redirects_before_following_them() -> None:
+    """Refuse transport-level redirects in the dedicated HTTP middleware."""
+    response = MagicMock(status=302)
+    handler = AsyncMock(return_value=response)
+    with pytest.raises(SignalRProbeError, match="transport redirect"):
+        await _deny_http_redirects(MagicMock(), handler)
+    response.close.assert_called_once()
+    handler.assert_awaited_once()
+
+
+async def test_probe_allows_websocket_upgrade_response() -> None:
+    """The redirect guard must allow an HTTP 101 WebSocket handshake."""
+    response = MagicMock(status=101)
+    handler = AsyncMock(return_value=response)
+    assert await _deny_http_redirects(MagicMock(), handler) is response
+    response.close.assert_not_called()
 
 
 @pytest.mark.parametrize(
@@ -244,10 +268,15 @@ async def test_action_registers_without_connecting_at_startup(
     hass: HomeAssistant, config_entry, mock_api
 ) -> None:
     """A normal integration start must never open a SignalR connection."""
-    with patch(
-        "custom_components.remeha_home.signalr_probe_service.async_probe_signalr",
-        new_callable=AsyncMock,
-    ) as probe:
+    with (
+        patch(
+            "custom_components.remeha_home.signalr_probe_service.async_probe_signalr",
+            new_callable=AsyncMock,
+        ) as probe,
+        patch(
+            "custom_components.remeha_home.signalr_probe_service.async_create_clientsession"
+        ) as create_session,
+    ):
         await setup_integration(hass, config_entry, mock_api)
         assert hass.services.has_service(DOMAIN, SERVICE_PROBE_SIGNALR)
         probe.assert_not_awaited()
@@ -267,6 +296,11 @@ async def test_action_registers_without_connecting_at_startup(
         )
         assert result == {"connected": True, "events": []}
         probe.assert_awaited_once()
+        assert create_session.call_args.kwargs["auto_cleanup"] is False
+        assert create_session.call_args.kwargs["middlewares"] == (
+            _deny_http_redirects,
+        )
+        create_session.return_value.detach.assert_called_once()
         mock_api.async_set_manual.assert_not_awaited()
         mock_api.async_set_heating_curve.assert_not_awaited()
         mock_api.async_set_dhw_comfort_setpoint.assert_not_awaited()

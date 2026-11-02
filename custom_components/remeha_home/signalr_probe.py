@@ -176,14 +176,14 @@ async def async_probe_signalr(
             "Ocp-Apim-Subscription-Key": BDR_SUBSCRIPTION_KEY,
         }
     # Never include URLs, tokens or server exceptions in action responses.
-    # HTTP/WebSocket redirects are disabled even after validating negotiation.
+    # The dedicated session in signalr_probe_service blocks HTTP redirects:
+    # aiohttp.ws_connect() does not accept an allow_redirects argument.
     ws = await asyncio.wait_for(
         session.ws_connect(
             ws_url,
             params=params,
             headers=headers,
             max_msg_size=MAX_MESSAGE_BUFFER,
-            allow_redirects=False,
         ),
         timeout=10,
     )
